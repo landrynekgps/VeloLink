@@ -2,10 +2,10 @@
   "domain": "velolink",
   "name": "Velolink",
   "version": "1.0.0",
-  "documentation": "https://github.com/yourname/velolink-ha",
-  "issue_tracker": "https://github.com/yourname/velolink-ha/issues",
+  "documentation": "https://github.com/landrynekgps/velolink-ha",
+  "issue_tracker": "https://github.com/landrynekgps/velolink-ha/issues",
   "requirements": ["pyserial-asyncio>=0.6"],
-  "codeowners": ["@yourname"],
+  "codeowners": ["@landrynekgps"],
   "iot_class": "local_push",
   "config_flow": true,
   "loggers": ["custom_components.velolink"]
