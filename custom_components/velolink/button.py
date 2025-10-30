@@ -1,4 +1,5 @@
 """Button platform for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -24,15 +25,9 @@ async def async_setup_entry(
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
 
     entities = [
-        VelolinkDiscoveryButton(
-            hub, entry.entry_id, "bus1", "Skanuj Bus 1"
-        ),
-        VelolinkDiscoveryButton(
-            hub, entry.entry_id, "bus2", "Skanuj Bus 2"
-        ),
-        VelolinkDiscoveryButton(
-            hub, entry.entry_id, "all", "Skanuj wszystkie"
-        ),
+        VelolinkDiscoveryButton(hub, entry.entry_id, "bus1", "Skanuj Bus 1"),
+        VelolinkDiscoveryButton(hub, entry.entry_id, "bus2", "Skanuj Bus 2"),
+        VelolinkDiscoveryButton(hub, entry.entry_id, "all", "Skanuj wszystkie"),
     ]
 
     async_add_entities(entities)
@@ -40,7 +35,9 @@ async def async_setup_entry(
 
 class VelolinkDiscoveryButton(ButtonEntity):
     """Button to trigger discovery."""
-    pylint: disable=abstract-method
+
+    # pylint: disable=abstract-method
+
     _attr_should_poll = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
