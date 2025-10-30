@@ -46,29 +46,50 @@
       "init": {
         "title": "Opcje Velolink",
         "menu_options": {
-          "edit_channel": "Edytuj kanał",
-          "edit_device_name": "Zmień nazwę urządzenia"
+          "scan_devices": "🔍 Skanuj nowe urządzenia",
+          "edit_channel": "⚙️ Edytuj kanał (Device Class, NO/NC)",
+          "edit_device_name": "✏️ Zmień nazwę urządzenia"
         }
+      },
+      "scan_devices": {
+        "title": "Skanowanie urządzeń",
+        "description": "{info}",
+        "data": {
+          "bus_selection": "Magistrala do przeskanowania"
+        }
+      },
+      "scan_result": {
+        "title": "Wynik skanowania",
+        "description": "{result}"
       },
       "edit_channel": {
         "title": "Wybierz kanał",
+        "description": "Znaleziono {count} kanałów",
         "data": {
           "channel": "Kanał"
         }
       },
       "configure_channel": {
         "title": "Konfiguracja kanału",
-        "description": "Bus: {bus_id}, Adres: {address}, Kanał: {channel}",
+        "description": "Bus: {bus_id}, Adres: {address}, Kanał: {channel} ({type})",
         "data": {
           "device_class": "Klasa urządzenia",
           "polarity": "Polaryzacja"
         }
       },
       "edit_device_name": {
-        "title": "Nazwa urządzenia",
+        "title": "Zmień nazwę urządzenia",
+        "description": "Wybierz urządzenie do zmiany nazwy ({count} dostępnych)",
         "data": {
           "device": "Urządzenie",
-          "name": "Nowa nazwa"
+          "new_name": "Nowa nazwa"
+        }
+      },
+      "confirm_device_name": {
+        "title": "Potwierdź nową nazwę",
+        "description": "Urządzenie: {device}\nObecna nazwa: {current}",
+        "data": {
+          "new_name": "Nowa nazwa"
         }
       }
     }
