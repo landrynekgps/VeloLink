@@ -3,42 +3,42 @@
   "config": {
     "step": {
       "user": {
-        "title": "Velolink",
-        "description": "Choose connection type to Velolink network",
+        "title": "Velolink - Connection Type",
+        "description": "Choose the connection type to the Velolink network.",
         "data": {
           "connection_type": "Connection type"
         }
       },
       "serial": {
-        "title": "Serial connection",
-        "description": "Configure RS485 ports (RPi HAT / USB)",
+        "title": "Serial Connection",
+        "description": "Configure RS485 ports for Velolink HAT or a USB adapter.",
         "data": {
-          "port1": "RS485 Port #1 (Bus 1)",
-          "port2": "RS485 Port #2 (Bus 2, optional)",
+          "port1": "RS485 Port #1 (e.g., Electrical Panel)",
+          "port2": "RS485 Port #2 (e.g., Home, optional)",
           "baudrate": "Baudrate",
-          "rts_toggle": "RTS toggle",
-          "scan_on_startup": "Scan devices on startup"
+          "rts_toggle": "RTS Toggle (for some adapters)",
+          "scan_on_startup": "Scan for devices on startup"
         }
       },
       "tcp": {
         "title": "VeloGateway (TCP/IP)",
-        "description": "Connect to VeloGateway over network",
+        "description": "Connect to VeloGateway over Ethernet/WiFi.",
         "data": {
-          "gateway_host": "VeloGateway IP address",
-          "gateway_port": "TCP port",
-          "scan_on_startup": "Scan devices on startup"
+          "gateway_host": "VeloGateway IP Address",
+          "gateway_port": "TCP Port",
+          "scan_on_startup": "Scan for devices on startup"
         }
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to VeloGateway",
-      "ports_identical": "RS485 ports must be different",
-      "unknown": "Unknown error"
+      "cannot_connect": "Failed to connect to VeloGateway.",
+      "ports_identical": "RS485 ports must be different.",
+      "unknown": "An unknown error occurred."
     },
     "abort": {
-      "already_configured": "Device is already configured",
-      "no_channels": "No channels available for configuration",
-      "no_devices": "No devices detected"
+      "already_configured": "This device is already configured.",
+      "no_channels": "No channels available for configuration.",
+      "no_devices": "No devices detected."
     }
   },
   "options": {
@@ -46,29 +46,49 @@
       "init": {
         "title": "Velolink Options",
         "menu_options": {
-          "edit_channel": "Edit channel",
-          "edit_device_name": "Change device name"
+          "scan_devices": "🔍 Scan for new devices",
+          "edit_channel": "⚙️ Edit Channel (Device Class, NO/NC)",
+          "edit_device_name": "✏️ Rename Device"
         }
       },
+      "scan_devices": {
+        "title": "Scan for Devices",
+        "description": "Scanning may take a few seconds.",
+        "data": {
+          "bus_selection": "Bus to scan"
+        }
+      },
+      "scan_result": {
+        "title": "Scan Result",
+        "description": "{result}"
+      },
       "edit_channel": {
-        "title": "Select channel",
+        "title": "Select Channel",
+        "description": "Found {count} configurable channels.",
         "data": {
           "channel": "Channel"
         }
       },
       "configure_channel": {
-        "title": "Channel configuration",
-        "description": "Bus: {bus_id}, Address: {address}, Channel: {channel}",
+        "title": "Channel Configuration",
+        "description": "Bus: {bus_id}, Address: {address}, Channel: {channel} ({type})",
         "data": {
-          "device_class": "Device class",
+          "device_class": "Device Class",
           "polarity": "Polarity"
         }
       },
       "edit_device_name": {
-        "title": "Device name",
+        "title": "Select Device",
+        "description": "Select the device to rename ({count} available).",
         "data": {
-          "device": "Device",
-          "name": "New name"
+          "device": "Device"
+        }
+      },
+      "set_device_name": {
+        "title": "Enter New Name",
+        "description": "Device: {device}\nCurrent name: {current}",
+        "data": {
+          "new_name": "New name"
         }
       }
     }
