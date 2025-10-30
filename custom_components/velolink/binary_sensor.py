@@ -35,14 +35,19 @@ async def async_setup_entry(
 ):
     """Set up binary sensors."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
+    storage: VelolinkStorage = hass.data[DOMAIN][
+        f"{entry.entry_id}_storage"
+    ]
     created: set[str] = set()
 
     @callback
     def _handle_new_node(node: VelolinkNode) -> None:
-        if node.kind not in (NODE_KIND_INPUT, NODE_KIND_VELOSWITCH, NODE_KIND_VELOMOTION):
+        node_kinds = (
+            NODE_KIND_INPUT, NODE_KIND_VELOSWITCH, NODE_KIND_VELOMOTION
+        )
+        if node.kind not in node_kinds:
             return
-        
+
         entities = []
         for ch in range(node.channels):
             uid = f"{node.bus_id}-{node.address}-in-{ch}"
@@ -50,7 +55,7 @@ async def async_setup_entry(
                 continue
             created.add(uid)
             entities.append(VelolinkInputEntity(hub, storage, node, ch))
-        
+
         if entities:
             async_add_entities(entities)
 
@@ -62,7 +67,8 @@ async def async_setup_entry(
 
 class VelolinkInputEntity(BinarySensorEntity):
     """Binary sensor for Velolink input."""
-    
+    # pylint: disable=too-many-instance-attributes
+
     _attr_should_poll = False
 
     def __init__(
@@ -79,7 +85,7 @@ class VelolinkInputEntity(BinarySensorEntity):
         self._ch = ch
         self._state = False
         self._unsub: Callable[[], None] | None = None
-        
+
         self._load_config()
 
     def _load_config(self) -> None:
@@ -103,13 +109,14 @@ class VelolinkInputEntity(BinarySensorEntity):
         )
         if custom_name:
             return f"{custom_name} IN {self._ch}"
-        
+
         if self._node.kind == NODE_KIND_VELOSWITCH:
             return f"VeloSwitch {self._node.address}:{self._ch}"
-        elif self._node.kind == NODE_KIND_VELOMOTION:
+
+        if self._node.kind == NODE_KIND_VELOMOTION:
             return f"VeloMotion {self._node.address}"
-        else:
-            return f"Velolink IN {self._node.address}:{self._ch}"
+
+        return f"Velolink IN {self._node.address}:{self._ch}"
 
     @property
     def is_on(self) -> bool:
@@ -129,10 +136,16 @@ class VelolinkInputEntity(BinarySensorEntity):
         custom_name = self._storage.get_device_name(
             self._node.bus_id, self._node.address
         )
-        
+
+        identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
+        device_name = (
+            custom_name or
+            f"Velolink {self._node.kind.title()} {self._node.address}"
+        )
+
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._node.bus_id}-{self._node.address}")},
-            name=custom_name or f"Velolink {self._node.kind.title()} {self._node.address}",
+            identifiers={identifier},
+            name=device_name,
             manufacturer=self._node.manufacturer,
             model=self._node.model or f"IO-{self._node.kind.upper()}",
             sw_version=self._node.sw_version,
@@ -157,7 +170,7 @@ class VelolinkInputEntity(BinarySensorEntity):
         def _on_change(val: bool) -> None:
             self._state = val
             self.async_write_ha_state()
-        
+
         self._unsub = self._hub.subscribe_input(
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
