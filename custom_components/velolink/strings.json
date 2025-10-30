@@ -1,1 +1,76 @@
-
+{
+  "title": "Velolink",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Velolink",
+        "description": "Wybierz sposób połączenia z siecią Velolink",
+        "data": {
+          "connection_type": "Typ połączenia"
+        }
+      },
+      "serial": {
+        "title": "Połączenie szeregowe",
+        "description": "Skonfiguruj porty RS485 (RPi HAT / USB)",
+        "data": {
+          "port1": "Port RS485 #1 (Bus 1)",
+          "port2": "Port RS485 #2 (Bus 2, opcjonalnie)",
+          "baudrate": "Szybkość transmisji (baudrate)",
+          "rts_toggle": "Przełączanie RTS",
+          "scan_on_startup": "Skanuj urządzenia przy starcie"
+        }
+      },
+      "tcp": {
+        "title": "VeloGateway (TCP/IP)",
+        "description": "Połącz się z VeloGateway przez sieć",
+        "data": {
+          "gateway_host": "Adres IP VeloGateway",
+          "gateway_port": "Port TCP",
+          "scan_on_startup": "Skanuj urządzenia przy starcie"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie można połączyć się z VeloGateway",
+      "ports_identical": "Porty RS485 muszą być różne",
+      "unknown": "Nieznany błąd"
+    },
+    "abort": {
+      "already_configured": "To urządzenie jest już skonfigurowane",
+      "no_channels": "Brak dostępnych kanałów do konfiguracji",
+      "no_devices": "Brak wykrytych urządzeń"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opcje Velolink",
+        "menu_options": {
+          "edit_channel": "Edytuj kanał",
+          "edit_device_name": "Zmień nazwę urządzenia"
+        }
+      },
+      "edit_channel": {
+        "title": "Wybierz kanał",
+        "data": {
+          "channel": "Kanał"
+        }
+      },
+      "configure_channel": {
+        "title": "Konfiguracja kanału",
+        "description": "Bus: {bus_id}, Adres: {address}, Kanał: {channel}",
+        "data": {
+          "device_class": "Klasa urządzenia",
+          "polarity": "Polaryzacja"
+        }
+      },
+      "edit_device_name": {
+        "title": "Nazwa urządzenia",
+        "data": {
+          "device": "Urządzenie",
+          "name": "Nowa nazwa"
+        }
+      }
+    }
+  }
+}
