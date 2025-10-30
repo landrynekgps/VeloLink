@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/landrynekgps/VeloLink.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/stargazers)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/graphs/commit-activity)
 
-![Velolink Logo](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/icon.png)
+![Velolink Logo](https://raw.githubusercontent.com/landrynekgps/VeloLink/icon.png)
 
 **Velolink** to system automatyki domowej wykorzystujący **magistralę RS485** do szybkiej i niezawodnej komunikacji z modułami wejść/wyjść, przełącznikami ściennymi, ściemniaczami i czujnikami.
 
