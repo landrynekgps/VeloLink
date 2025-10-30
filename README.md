@@ -51,9 +51,9 @@
 
 | Moduł | Typ | Kanały | Zastosowanie |
 |-------|-----|--------|--------------|
-| **IO-8IN** | Wejścia binarne | 8 | Przyciski, czujniki drzwi/okien, PIR |
+| **IO-16IN** | Wejścia binarne | 16 | Przyciski, czujniki drzwi/okien, PIR |
 | **IO-12OUT** | Przekaźniki | 12 | Światła, rolety, bramy, ogrzewanie |
-| **IO-OUT** | Przekaźniki | 4 | Duże moce 16A oraz pomiar prądu |
+| **IO-4OUT** | Przekaźniki | 4 | Duże moce 16A oraz pomiar prądu |
 | **IO-PWM** | PWM 0–255 | 4–8 | Ściemnianie LED, regulatory |
 | **IO-ANALOG** | Wejścia 0–10V | 4–8 | Czujniki temp/wilg, natężenie światła |
 
