@@ -62,7 +62,7 @@ async def async_setup_entry(
 
 class VelolinkOutputEntity(SwitchEntity):
     """Switch for Velolink output."""
-    # pylint: disable=too-many-instance-attributes
+    pylint: disable=too-many-instance-attributes,abstract-method
 
     _attr_should_poll = False
 
