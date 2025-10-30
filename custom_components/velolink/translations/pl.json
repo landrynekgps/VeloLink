@@ -3,7 +3,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Velolink",
+        "title": "Velolink - Typ połączenia",
         "description": "Wybierz sposób połączenia z siecią Velolink",
         "data": {
           "connection_type": "Typ połączenia"
@@ -11,34 +11,34 @@
       },
       "serial": {
         "title": "Połączenie szeregowe",
-        "description": "Skonfiguruj porty RS485 (RPi HAT / USB)",
+        "description": "Skonfiguruj porty RS485 dla Velolink HAT lub adaptera USB.",
         "data": {
-          "port1": "Port RS485 #1 (Bus 1)",
-          "port2": "Port RS485 #2 (Bus 2, opcjonalnie)",
+          "port1": "Port RS485 #1 (np. Rozdzielnica)",
+          "port2": "Port RS485 #2 (np. Dom, opcjonalnie)",
           "baudrate": "Szybkość transmisji",
-          "rts_toggle": "Przełączanie RTS",
-          "scan_on_startup": "Skanuj przy starcie"
+          "rts_toggle": "Przełączanie RTS (dla niektórych adapterów)",
+          "scan_on_startup": "Skanuj urządzenia przy starcie"
         }
       },
       "tcp": {
         "title": "VeloGateway (TCP/IP)",
-        "description": "Połącz się z VeloGateway przez sieć",
+        "description": "Połącz się z VeloGateway przez sieć Ethernet/WiFi.",
         "data": {
           "gateway_host": "Adres IP VeloGateway",
           "gateway_port": "Port TCP",
-          "scan_on_startup": "Skanuj przy starcie"
+          "scan_on_startup": "Skanuj urządzenia przy starcie"
         }
       }
     },
     "error": {
-      "cannot_connect": "Nie można połączyć",
-      "ports_identical": "Porty muszą być różne",
-      "unknown": "Nieznany błąd"
+      "cannot_connect": "Nie można połączyć się z VeloGateway.",
+      "ports_identical": "Porty RS485 muszą być różne.",
+      "unknown": "Wystąpił nieznany błąd."
     },
     "abort": {
-      "already_configured": "Już skonfigurowane",
-      "no_channels": "Brak kanałów",
-      "no_devices": "Brak urządzeń"
+      "already_configured": "To urządzenie jest już skonfigurowane.",
+      "no_channels": "Brak dostępnych kanałów do konfiguracji.",
+      "no_devices": "Nie wykryto żadnych urządzeń."
     }
   },
   "options": {
@@ -46,29 +46,49 @@
       "init": {
         "title": "Opcje Velolink",
         "menu_options": {
-          "edit_channel": "Edytuj kanał",
-          "edit_device_name": "Zmień nazwę"
+          "scan_devices": "🔍 Skanuj nowe urządzenia",
+          "edit_channel": "⚙️ Edytuj kanał (Device Class, NO/NC)",
+          "edit_device_name": "✏️ Zmień nazwę urządzenia"
         }
+      },
+      "scan_devices": {
+        "title": "Skanowanie urządzeń",
+        "description": "Skanowanie może potrwać kilka sekund.",
+        "data": {
+          "bus_selection": "Magistrala do przeskanowania"
+        }
+      },
+      "scan_result": {
+        "title": "Wynik skanowania",
+        "description": "{result}"
       },
       "edit_channel": {
         "title": "Wybierz kanał",
+        "description": "Znaleziono {count} kanałów do konfiguracji.",
         "data": {
           "channel": "Kanał"
         }
       },
       "configure_channel": {
-        "title": "Konfiguracja",
-        "description": "Bus: {bus_id}, Adres: {address}, Kanał: {channel}",
+        "title": "Konfiguracja kanału",
+        "description": "Bus: {bus_id}, Adres: {address}, Kanał: {channel} ({type})",
         "data": {
           "device_class": "Klasa urządzenia",
           "polarity": "Polaryzacja"
         }
       },
       "edit_device_name": {
-        "title": "Nazwa urządzenia",
+        "title": "Wybierz urządzenie",
+        "description": "Wybierz urządzenie, którego nazwę chcesz zmienić ({count} dostępnych).",
         "data": {
-          "device": "Urządzenie",
-          "name": "Nowa nazwa"
+          "device": "Urządzenie"
+        }
+      },
+      "set_device_name": {
+        "title": "Wprowadź nową nazwę",
+        "description": "Urządzenie: {device}\nObecna nazwa: {current}",
+        "data": {
+          "new_name": "Nowa nazwa"
         }
       }
     }
