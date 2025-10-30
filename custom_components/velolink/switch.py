@@ -1,4 +1,5 @@
 """Switch platform for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -33,9 +34,7 @@ async def async_setup_entry(
 ):
     """Set up switches."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][
-        f"{entry.entry_id}_storage"
-    ]
+    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
     created: set[str] = set()
 
     @callback
@@ -62,16 +61,13 @@ async def async_setup_entry(
 
 class VelolinkOutputEntity(SwitchEntity):
     """Switch for Velolink output."""
-    pylint: disable=too-many-instance-attributes,abstract-method
+
+    pylint: disable = too - many - instance - attributes, abstract - method
 
     _attr_should_poll = False
 
     def __init__(
-        self,
-        hub: VelolinkHub,
-        storage: VelolinkStorage,
-        node: VelolinkNode,
-        ch: int
+        self, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
     ) -> None:
         """Initialize entity."""
         self._hub = hub
@@ -127,8 +123,7 @@ class VelolinkOutputEntity(SwitchEntity):
 
         identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
         device_name = (
-            custom_name or
-            f"Velolink {self._node.kind.title()} {self._node.address}"
+            custom_name or f"Velolink {self._node.kind.title()} {self._node.address}"
         )
 
         return DeviceInfo(
@@ -156,20 +151,19 @@ class VelolinkOutputEntity(SwitchEntity):
         """Turn on."""
         physical_state = self._polarity != POLARITY_NC
         await self._hub.async_set_output(
-            self._node.bus_id, self._node.address,
-            self._ch, physical_state
+            self._node.bus_id, self._node.address, self._ch, physical_state
         )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off."""
         physical_state = self._polarity == POLARITY_NC
         await self._hub.async_set_output(
-            self._node.bus_id, self._node.address,
-            self._ch, physical_state
+            self._node.bus_id, self._node.address, self._ch, physical_state
         )
 
     async def async_added_to_hass(self) -> None:
         """Handle entity added."""
+
         @callback
         def _on_change(val: bool) -> None:
             self._state = val

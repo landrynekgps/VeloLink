@@ -1,4 +1,5 @@
 """Velolink hub and RS485 transport."""
+
 from __future__ import annotations
 
 import asyncio
@@ -26,6 +27,7 @@ Channel = int
 @dataclass
 class VelolinkNode:
     """Velolink device node."""
+
     # pylint: disable=too-many-instance-attributes
     bus_id: BusId
     address: Addr
@@ -44,6 +46,7 @@ class VelolinkNode:
 @dataclass
 class VelolinkBusConfig:
     """Bus configuration."""
+
     port: str | None = None
     host: str | None = None
     tcp_port: int = 5485
@@ -62,7 +65,7 @@ class SerialTransport:
         hass: HomeAssistant,
         bus_id: BusId,
         cfg: VelolinkBusConfig,
-        frame_cb: Callable[[BusId, bytes], None]
+        frame_cb: Callable[[BusId, bytes], None],
     ) -> None:
         """Initialize serial transport."""
         self._hass = hass
@@ -81,7 +84,9 @@ class SerialTransport:
 
         _LOGGER.info(
             "Starting Serial %s on %s @ %d",
-            self._bus_id, self._cfg.port, self._cfg.baudrate
+            self._bus_id,
+            self._cfg.port,
+            self._cfg.baudrate,
         )
 
         loop = asyncio.get_running_loop()
@@ -90,8 +95,7 @@ class SerialTransport:
         if self._cfg.rts_toggle:
             try:
                 rs485_settings = serial.rs485.RS485Settings(
-                    rts_level_for_tx=True,
-                    rts_level_for_rx=False
+                    rts_level_for_tx=True, rts_level_for_rx=False
                 )
             except Exception:  # pylint: disable=broad-exception-caught
                 _LOGGER.warning("RS485Settings not supported")
@@ -99,9 +103,7 @@ class SerialTransport:
         self._serial_transport, self._serial_protocol = (
             await serial_asyncio.create_serial_connection(
                 loop,
-                lambda: _SerialProtocol(
-                    self._hass, self._frame_cb, self._bus_id
-                ),
+                lambda: _SerialProtocol(self._hass, self._frame_cb, self._bus_id),
                 url=self._cfg.port,
                 baudrate=self._cfg.baudrate,
                 bytesize=serial.EIGHTBITS,
@@ -133,7 +135,7 @@ class _SerialProtocol(asyncio.Protocol):
         self,
         hass: HomeAssistant,
         frame_cb: Callable[[BusId, bytes], None],
-        bus_id: BusId
+        bus_id: BusId,
     ) -> None:
         """Initialize protocol."""
         self._hass = hass
@@ -149,9 +151,7 @@ class _SerialProtocol(asyncio.Protocol):
             frame = self._extract_one_frame()
             if not frame:
                 break
-            self._hass.loop.call_soon_threadsafe(
-                self.frame_cb, self.bus_id, frame
-            )
+            self._hass.loop.call_soon_threadsafe(self.frame_cb, self.bus_id, frame)
 
         if len(self.buffer) > 512:
             _LOGGER.warning("Bus %s: buffer overflow", self.bus_id)
@@ -183,6 +183,7 @@ class _SerialProtocol(asyncio.Protocol):
 # ========== TCP Transport ==========
 class TcpTransport:
     """TCP transport for VeloGateway."""
+
     # pylint: disable=too-many-instance-attributes
 
     def __init__(
@@ -190,7 +191,7 @@ class TcpTransport:
         hass: HomeAssistant,
         bus_id: BusId,
         cfg: VelolinkBusConfig,
-        frame_cb: Callable[[BusId, bytes], None]
+        frame_cb: Callable[[BusId, bytes], None],
     ) -> None:
         """Initialize TCP transport."""
         self._hass = hass
@@ -228,7 +229,9 @@ class TcpTransport:
             except Exception as err:  # pylint: disable=broad-exception-caught
                 _LOGGER.warning(
                     "TCP %s disconnected: %s, reconnecting in %ds",
-                    self._bus_id, err, GATEWAY_RECONNECT_DELAY_S
+                    self._bus_id,
+                    err,
+                    GATEWAY_RECONNECT_DELAY_S,
                 )
                 await asyncio.sleep(GATEWAY_RECONNECT_DELAY_S)
 
@@ -236,7 +239,9 @@ class TcpTransport:
         """Connect to gateway."""
         _LOGGER.info(
             "Connecting to VeloGateway %s:%d (bus=%s)",
-            self._cfg.host, self._cfg.tcp_port, self._bus_id
+            self._cfg.host,
+            self._cfg.tcp_port,
+            self._bus_id,
         )
 
         self._reader, self._writer = await asyncio.open_connection(
@@ -263,7 +268,7 @@ class TcpTransport:
 
                 # Packet: [MAGIC(2)|VER(1)|BUS(1)|LEN(2)|RS485|CRC(2)]
                 frame_len = packet[4] | (packet[5] << 8)
-                rs485_frame = packet[6:6+frame_len]
+                rs485_frame = packet[6 : 6 + frame_len]
 
                 self._hass.loop.call_soon_threadsafe(
                     self._frame_cb, self._bus_id, rs485_frame
@@ -300,11 +305,11 @@ class TcpTransport:
             magic = bytes([0x56, 0x4C])
             version = bytes([0x01])
             bus_byte = bytes([0x01 if self._bus_id == "bus1" else 0x02])
-            length = len(frame).to_bytes(2, 'little')
+            length = len(frame).to_bytes(2, "little")
 
             packet_body = magic + version + bus_byte + length + frame
             crc = self._crc16(packet_body)
-            packet = packet_body + crc.to_bytes(2, 'little')
+            packet = packet_body + crc.to_bytes(2, "little")
 
             self._writer.write(packet)
             await self._writer.drain()
@@ -318,23 +323,21 @@ class TcpTransport:
                 crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
         return crc
         # ========== Main Hub ==========
+
+
 class VelolinkHub:
     """Velolink hub managing transports and devices."""
+
     # pylint: disable=too-many-instance-attributes
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        entry_id: str,
-        buses: Dict[BusId, VelolinkBusConfig]
+        self, hass: HomeAssistant, entry_id: str, buses: Dict[BusId, VelolinkBusConfig]
     ) -> None:
         """Initialize hub."""
         self._hass = hass
         self._entry_id = entry_id
         self._buses_cfg = buses
-        self._transports: Dict[
-            BusId, SerialTransport | TcpTransport
-        ] = {}
+        self._transports: Dict[BusId, SerialTransport | TcpTransport] = {}
         self._nodes: Dict[Tuple[BusId, Addr], VelolinkNode] = {}
 
         # Subscriptions
@@ -363,13 +366,9 @@ class VelolinkHub:
         """Start hub."""
         for bus_id, cfg in self._buses_cfg.items():
             if cfg.transport == "serial":
-                transport = SerialTransport(
-                    self._hass, bus_id, cfg, self._on_frame
-                )
+                transport = SerialTransport(self._hass, bus_id, cfg, self._on_frame)
             elif cfg.transport == "tcp":
-                transport = TcpTransport(
-                    self._hass, bus_id, cfg, self._on_frame
-                )
+                transport = TcpTransport(self._hass, bus_id, cfg, self._on_frame)
             else:
                 raise ValueError(f"Unknown transport: {cfg.transport}")
 
@@ -385,17 +384,14 @@ class VelolinkHub:
         """Stop hub."""
         self._running = False
         await asyncio.gather(
-            *(t.async_stop() for t in self._transports.values()),
-            return_exceptions=True
+            *(t.async_stop() for t in self._transports.values()), return_exceptions=True
         )
         self._transports.clear()
 
     async def async_discovery_bus(self, bus_id: BusId) -> None:
         """Discover devices on bus."""
         _LOGGER.info("Discovery on %s", bus_id)
-        frame = self._build_frame(
-            addr=0x00, func=FunctionCode.DISCOVER, payload=b""
-        )
+        frame = self._build_frame(addr=0x00, func=FunctionCode.DISCOVER, payload=b"")
         await self._transports[bus_id].async_write_frame(frame)
         await asyncio.sleep(2.0)
         async_dispatcher_send(
@@ -413,7 +409,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[bool], None]
+        callback_func: Callable[[bool], None],
     ) -> Callable[[], None]:
         """Subscribe to input changes."""
         key = (bus_id, addr, ch)
@@ -431,7 +427,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[bool], None]
+        callback_func: Callable[[bool], None],
     ) -> Callable[[], None]:
         """Subscribe to output changes."""
         key = (bus_id, addr, ch)
@@ -449,7 +445,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[int], None]
+        callback_func: Callable[[int], None],
     ) -> Callable[[], None]:
         """Subscribe to PWM changes."""
         key = (bus_id, addr, ch)
@@ -467,7 +463,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[bool], None]
+        callback_func: Callable[[bool], None],
     ) -> Callable[[], None]:
         """Subscribe to button events."""
         key = (bus_id, addr, ch)
@@ -485,7 +481,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[int], None]
+        callback_func: Callable[[int], None],
     ) -> Callable[[], None]:
         """Subscribe to encoder events."""
         key = (bus_id, addr, ch)
@@ -503,7 +499,7 @@ class VelolinkHub:
         bus_id: BusId,
         addr: Addr,
         ch: Channel,
-        callback_func: Callable[[float], None]
+        callback_func: Callable[[float], None],
     ) -> Callable[[], None]:
         """Subscribe to analog changes."""
         key = (bus_id, addr, ch)
@@ -533,9 +529,7 @@ class VelolinkHub:
         """Set PWM value."""
         value = max(0, min(255, value))
         payload = bytes([ch & 0xFF, value & 0xFF])
-        frame = self._build_frame(
-            addr=addr, func=FunctionCode.SET_PWM, payload=payload
-        )
+        frame = self._build_frame(addr=addr, func=FunctionCode.SET_PWM, payload=payload)
         await self._transports[bus_id].async_write_frame(frame)
 
     @callback
@@ -566,45 +560,40 @@ class VelolinkHub:
             self._emit(
                 self._subs_input,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                bool(parsed["value"])
+                bool(parsed["value"]),
             )
         elif parsed["type"] == "OUTPUT_STATE":
             self._emit(
                 self._subs_output,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                bool(parsed["value"])
+                bool(parsed["value"]),
             )
         elif parsed["type"] == "PWM_STATE":
             self._emit(
                 self._subs_pwm,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                int(parsed["value"])
+                int(parsed["value"]),
             )
         elif parsed["type"] == "ANALOG_SAMPLE":
             self._emit(
                 self._subs_analog,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                float(parsed["value"])
+                float(parsed["value"]),
             )
         elif parsed["type"] == "BUTTON_EVENT":
             self._emit(
                 self._subs_button,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                bool(parsed["pressed"])
+                bool(parsed["pressed"]),
             )
         elif parsed["type"] == "ENCODER_EVENT":
             self._emit(
                 self._subs_encoder,
                 (bus_id, parsed["addr"], parsed["ch"]),
-                int(parsed["delta"])
+                int(parsed["delta"]),
             )
 
-    def _emit(
-        self,
-        bucket: Dict[Tuple, List[Callable]],
-        key: Tuple,
-        value
-    ) -> None:
+    def _emit(self, bucket: Dict[Tuple, List[Callable]], key: Tuple, value) -> None:
         """Emit to subscribers."""
         for callback_func in bucket.get(key, []):
             try:
@@ -621,13 +610,8 @@ class VelolinkHub:
             return
 
         self._nodes[key] = node
-        _LOGGER.info(
-            "New node: %s @ %s:%d",
-            node.kind, node.bus_id, node.address
-        )
-        async_dispatcher_send(
-            self._hass, signal_new_node(self._entry_id), node
-        )
+        _LOGGER.info("New node: %s @ %s:%d", node.kind, node.bus_id, node.address)
+        async_dispatcher_send(self._hass, signal_new_node(self._entry_id), node)
 
     def get_node(self, bus_id: BusId, addr: Addr) -> VelolinkNode | None:
         """Get node by address."""
@@ -638,11 +622,9 @@ class VelolinkHub:
         pre = bytes([0xAA, 0x55])
         seq = 0
         length = len(payload)
-        body = bytes([
-            addr & 0xFF, func & 0xFF, seq & 0xFF, length & 0xFF
-        ]) + payload
+        body = bytes([addr & 0xFF, func & 0xFF, seq & 0xFF, length & 0xFF]) + payload
         crc = self._crc16_value(body)
-        return pre + body + crc.to_bytes(2, 'little')
+        return pre + body + crc.to_bytes(2, "little")
 
     def _crc16_value(self, data: bytes) -> int:
         """Calculate CRC16."""
@@ -673,7 +655,7 @@ class VelolinkHub:
 
         addr = frame[2]
         func = frame[3]
-        payload = frame[6:6+length]
+        payload = frame[6 : 6 + length]
 
         # HELLO Extended
         if func == FunctionCode.HELLO:
@@ -682,10 +664,14 @@ class VelolinkHub:
 
             kind_code = payload[0]
             kind_map = {
-                0x00: "input", 0x01: "output",
-                0x02: "pwm", 0x03: "analog",
-                0x0A: "veloswitch", 0x0B: "velodimmer",
-                0x0C: "velomotion", 0x0D: "velosensor",
+                0x00: "input",
+                0x01: "output",
+                0x02: "pwm",
+                0x03: "analog",
+                0x0A: "veloswitch",
+                0x0B: "velodimmer",
+                0x0C: "velomotion",
+                0x0D: "velosensor",
             }
             kind = kind_map.get(kind_code, "unknown")
             channels = payload[1]
@@ -700,8 +686,8 @@ class VelolinkHub:
                 model_len = payload[offset]
                 offset += 1
                 if offset + model_len <= len(payload):
-                    model = payload[offset:offset+model_len].decode(
-                        'ascii', errors='ignore'
+                    model = payload[offset : offset + model_len].decode(
+                        "ascii", errors="ignore"
                     )
                     offset += model_len
 
@@ -709,8 +695,8 @@ class VelolinkHub:
                 serial_len = payload[offset]
                 offset += 1
                 if offset + serial_len <= len(payload):
-                    serial = payload[offset:offset+serial_len].decode(
-                        'ascii', errors='ignore'
+                    serial = payload[offset : offset + serial_len].decode(
+                        "ascii", errors="ignore"
                     )
                     offset += serial_len
 
@@ -718,8 +704,8 @@ class VelolinkHub:
                 area_len = payload[offset]
                 offset += 1
                 if offset + area_len <= len(payload):
-                    area = payload[offset:offset+area_len].decode(
-                        'utf-8', errors='ignore'
+                    area = payload[offset : offset + area_len].decode(
+                        "utf-8", errors="ignore"
                     )
 
             return {
@@ -740,7 +726,7 @@ class VelolinkHub:
                 "type": "INPUT_CHANGE",
                 "addr": addr,
                 "ch": payload[0],
-                "value": payload[1]
+                "value": payload[1],
             }
 
         if func == FunctionCode.OUTPUT_STATE:
@@ -748,7 +734,7 @@ class VelolinkHub:
                 "type": "OUTPUT_STATE",
                 "addr": addr,
                 "ch": payload[0],
-                "value": payload[1]
+                "value": payload[1],
             }
 
         if func == FunctionCode.PWM_STATE:
@@ -756,7 +742,7 @@ class VelolinkHub:
                 "type": "PWM_STATE",
                 "addr": addr,
                 "ch": payload[0],
-                "value": payload[1]
+                "value": payload[1],
             }
 
         if func == FunctionCode.ANALOG_SAMPLE:
@@ -765,7 +751,7 @@ class VelolinkHub:
                 "type": "ANALOG_SAMPLE",
                 "addr": addr,
                 "ch": payload[0],
-                "value": val / 1000.0
+                "value": val / 1000.0,
             }
 
         if func == FunctionCode.BUTTON_EVENT:
@@ -773,16 +759,16 @@ class VelolinkHub:
                 "type": "BUTTON_EVENT",
                 "addr": addr,
                 "ch": payload[0],
-                "pressed": bool(payload[1])
+                "pressed": bool(payload[1]),
             }
 
         if func == FunctionCode.ENCODER_EVENT:
-            delta = int.from_bytes([payload[1]], 'little', signed=True)
+            delta = int.from_bytes([payload[1]], "little", signed=True)
             return {
                 "type": "ENCODER_EVENT",
                 "addr": addr,
                 "ch": payload[0],
-                "delta": delta
+                "delta": delta,
             }
 
         raise ValueError(f"unknown func: {func:02X}")

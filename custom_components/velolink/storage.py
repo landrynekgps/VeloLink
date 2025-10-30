@@ -1,4 +1,5 @@
 """Storage management for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -36,7 +37,7 @@ class VelolinkStorage:
         _LOGGER.info(
             "Velolink storage loaded: %d channels, %d devices",
             len(self._data.get("channels", {})),
-            len(self._data.get("devices", {}))
+            len(self._data.get("devices", {})),
         )
 
     async def async_save(self) -> None:
@@ -48,10 +49,13 @@ class VelolinkStorage:
     ) -> Dict[str, Any]:
         """Get channel configuration."""
         key = f"{bus_id}-{addr}-{ch_type}-{ch}"
-        return self._data.get("channels", {}).get(key, {
-            "device_class": "none",
-            "polarity": POLARITY_NO,
-        })
+        return self._data.get("channels", {}).get(
+            key,
+            {
+                "device_class": "none",
+                "polarity": POLARITY_NO,
+            },
+        )
 
     async def async_set_channel_config(
         self,
@@ -83,9 +87,7 @@ class VelolinkStorage:
         key = f"{bus_id}-{addr}"
         return self._data.get("devices", {}).get(key, {}).get("name")
 
-    async def async_set_device_name(
-        self, bus_id: str, addr: int, name: str
-    ) -> None:
+    async def async_set_device_name(self, bus_id: str, addr: int, name: str) -> None:
         """Set custom device name."""
         key = f"{bus_id}-{addr}"
         if "devices" not in self._data:

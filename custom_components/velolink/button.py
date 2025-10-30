@@ -41,9 +41,7 @@ class VelolinkDiscoveryButton(ButtonEntity):
     _attr_should_poll = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(
-        self, hub: VelolinkHub, entry_id: str, target: str, name: str
-    ) -> None:
+    def __init__(self, hub: VelolinkHub, entry_id: str, target: str, name: str) -> None:
         """Initialize button."""
         self._hub = hub
         self._entry_id = entry_id

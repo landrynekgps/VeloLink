@@ -1,4 +1,5 @@
 """Config flow for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -40,6 +41,7 @@ def _list_serial_ports() -> list[str]:
     # pylint: disable=import-outside-toplevel,import-error
     try:
         from serial.tools import list_ports
+
         return [p.device for p in list_ports.comports()]
     except Exception:  # pylint: disable=broad-exception-caught
         return ["/dev/ttyAMA0", "/dev/ttyUSB0", "/dev/ttyUSB1"]
@@ -68,14 +70,16 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if self._connection_type == CONN_TYPE_TCP:
                 return await self.async_step_tcp()
 
-        schema = vol.Schema({
-            vol.Required(
-                CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL
-            ): vol.In({
-                CONN_TYPE_SERIAL: "Serial (RPi HAT / USB)",
-                CONN_TYPE_TCP: "TCP (VeloGateway)",
-            }),
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL): vol.In(
+                    {
+                        CONN_TYPE_SERIAL: "Serial (RPi HAT / USB)",
+                        CONN_TYPE_TCP: "TCP (VeloGateway)",
+                    }
+                ),
+            }
+        )
 
         return self.async_show_form(step_id="user", data_schema=schema)
 
@@ -107,25 +111,19 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=user_input,
                 )
 
-        schema = vol.Schema({
-            vol.Required(CONF_PORT1): vol.In(
-                ports if ports else ["/dev/ttyAMA0"]
-            ),
-            vol.Optional(CONF_PORT2): vol.In([""] + ports),
-            vol.Required(
-                CONF_BAUDRATE, default=DEFAULT_BAUDRATE
-            ): cv.positive_int,
-            vol.Required(
-                CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE
-            ): bool,
-            vol.Required(
-                CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
-            ): bool,
-        })
-
-        return self.async_show_form(
-            step_id="serial", data_schema=schema, errors=errors
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PORT1): vol.In(ports if ports else ["/dev/ttyAMA0"]),
+                vol.Optional(CONF_PORT2): vol.In([""] + ports),
+                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
+                vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
+                vol.Required(
+                    CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+                ): bool,
+            }
         )
+
+        return self.async_show_form(step_id="serial", data_schema=schema, errors=errors)
 
     async def async_step_tcp(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -138,12 +136,12 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Test connection
             try:
                 import socket
+
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(3)
-                result = sock.connect_ex((
-                    user_input[CONF_GATEWAY_HOST],
-                    user_input[CONF_GATEWAY_PORT]
-                ))
+                result = sock.connect_ex(
+                    (user_input[CONF_GATEWAY_HOST], user_input[CONF_GATEWAY_PORT])
+                )
                 sock.close()
 
                 if result != 0:
@@ -165,19 +163,17 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=user_input,
                 )
 
-        schema = vol.Schema({
-            vol.Required(CONF_GATEWAY_HOST): str,
-            vol.Required(
-                CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT
-            ): cv.port,
-            vol.Required(
-                CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
-            ): bool,
-        })
-
-        return self.async_show_form(
-            step_id="tcp", data_schema=schema, errors=errors
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_GATEWAY_HOST): str,
+                vol.Required(CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT): cv.port,
+                vol.Required(
+                    CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+                ): bool,
+            }
         )
+
+        return self.async_show_form(step_id="tcp", data_schema=schema, errors=errors)
 
     @staticmethod
     @callback
@@ -189,9 +185,7 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class VelolinkOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow."""
 
-    def __init__(
-        self, config_entry: config_entries.ConfigEntry
-    ) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
         self._bus_id: str | None = None
@@ -216,9 +210,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         # pylint: disable=import-outside-toplevel
         from .hub import VelolinkHub
 
-        hub: VelolinkHub = self.hass.data[DOMAIN][
-            self.config_entry.entry_id
-        ]
+        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
 
         channels = []
         # pylint: disable=protected-access
@@ -226,14 +218,12 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
             if node.kind in ["input", "veloswitch", "velomotion"]:
                 for ch in range(node.channels):
                     channels.append(
-                        f"{bus_id}:{addr}:in:{ch} "
-                        f"({node.model or node.kind})"
+                        f"{bus_id}:{addr}:in:{ch} " f"({node.model or node.kind})"
                     )
             elif node.kind == "output":
                 for ch in range(node.channels):
                     channels.append(
-                        f"{bus_id}:{addr}:out:{ch} "
-                        f"({node.model or node.kind})"
+                        f"{bus_id}:{addr}:out:{ch} " f"({node.model or node.kind})"
                     )
 
         if not channels:
@@ -248,13 +238,13 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
             self._channel = int(parts[3])
             return await self.async_step_configure_channel()
 
-        schema = vol.Schema({
-            vol.Required("channel"): vol.In(channels),
-        })
-
-        return self.async_show_form(
-            step_id="edit_channel", data_schema=schema
+        schema = vol.Schema(
+            {
+                vol.Required("channel"): vol.In(channels),
+            }
         )
+
+        return self.async_show_form(step_id="edit_channel", data_schema=schema)
 
     async def async_step_configure_channel(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -263,9 +253,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         # pylint: disable=import-outside-toplevel
         from .storage import VelolinkStorage
         from .const import signal_channel_config_updated
-        from homeassistant.helpers.dispatcher import (
-            async_dispatcher_send
-        )
+        from homeassistant.helpers.dispatcher import async_dispatcher_send
 
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"
@@ -287,8 +275,8 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                 {
                     "bus_id": self._bus_id,
                     "address": self._address,
-                    "channel": self._channel
-                }
+                    "channel": self._channel,
+                },
             )
 
             return self.async_create_entry(title="", data={})
@@ -302,16 +290,16 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         else:
             dc_map = DEVICE_CLASS_OUTPUT_MAP
 
-        schema = vol.Schema({
-            vol.Required(
-                "device_class",
-                default=current.get("device_class", "none")
-            ): vol.In(dc_map.keys()),
-            vol.Required(
-                "polarity",
-                default=current.get("polarity", POLARITY_NO)
-            ): vol.In([POLARITY_NO, POLARITY_NC]),
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    "device_class", default=current.get("device_class", "none")
+                ): vol.In(dc_map.keys()),
+                vol.Required(
+                    "polarity", default=current.get("polarity", POLARITY_NO)
+                ): vol.In([POLARITY_NO, POLARITY_NC]),
+            }
+        )
 
         return self.async_show_form(
             step_id="configure_channel",
@@ -331,9 +319,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         from .hub import VelolinkHub
         from .storage import VelolinkStorage
 
-        hub: VelolinkHub = self.hass.data[DOMAIN][
-            self.config_entry.entry_id
-        ]
+        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"
         ]
@@ -351,16 +337,14 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
             selected = user_input["device"].split(" ")[0].split(":")
             bus_id, addr = selected[0], int(selected[1])
 
-            await storage.async_set_device_name(
-                bus_id, addr, user_input["name"]
-            )
+            await storage.async_set_device_name(bus_id, addr, user_input["name"])
             return self.async_create_entry(title="", data={})
 
-        schema = vol.Schema({
-            vol.Required("device"): vol.In(devices),
-            vol.Required("name"): str,
-        })
-
-        return self.async_show_form(
-            step_id="edit_device_name", data_schema=schema
+        schema = vol.Schema(
+            {
+                vol.Required("device"): vol.In(devices),
+                vol.Required("name"): str,
+            }
         )
+
+        return self.async_show_form(step_id="edit_device_name", data_schema=schema)

@@ -137,8 +137,7 @@ class VelolinkLightEntity(LightEntity):
 
         identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
         device_name = (
-            custom_name
-            or f"Velolink {self._node.kind.title()} {self._node.address}"
+            custom_name or f"Velolink {self._node.kind.title()} {self._node.address}"
         )
 
         return DeviceInfo(

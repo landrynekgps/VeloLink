@@ -1,4 +1,5 @@
 """Binary sensor platform for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -35,16 +36,12 @@ async def async_setup_entry(
 ):
     """Set up binary sensors."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][
-        f"{entry.entry_id}_storage"
-    ]
+    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
     created: set[str] = set()
 
     @callback
     def _handle_new_node(node: VelolinkNode) -> None:
-        node_kinds = (
-            NODE_KIND_INPUT, NODE_KIND_VELOSWITCH, NODE_KIND_VELOMOTION
-        )
+        node_kinds = (NODE_KIND_INPUT, NODE_KIND_VELOSWITCH, NODE_KIND_VELOMOTION)
         if node.kind not in node_kinds:
             return
 
@@ -67,16 +64,13 @@ async def async_setup_entry(
 
 class VelolinkInputEntity(BinarySensorEntity):
     """Binary sensor for Velolink input."""
+
     # pylint: disable=too-many-instance-attributes
 
     _attr_should_poll = False
 
     def __init__(
-        self,
-        hub: VelolinkHub,
-        storage: VelolinkStorage,
-        node: VelolinkNode,
-        ch: int
+        self, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
     ) -> None:
         """Initialize entity."""
         self._hub = hub
@@ -139,8 +133,7 @@ class VelolinkInputEntity(BinarySensorEntity):
 
         identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
         device_name = (
-            custom_name or
-            f"Velolink {self._node.kind.title()} {self._node.address}"
+            custom_name or f"Velolink {self._node.kind.title()} {self._node.address}"
         )
 
         return DeviceInfo(
@@ -166,6 +159,7 @@ class VelolinkInputEntity(BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Handle entity added to hass."""
+
         @callback
         def _on_change(val: bool) -> None:
             self._state = val

@@ -1,4 +1,5 @@
 """Sensor platform for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -33,9 +34,7 @@ async def async_setup_entry(
 ):
     """Set up sensors."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][
-        f"{entry.entry_id}_storage"
-    ]
+    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
     created: set[str] = set()
 
     @callback
@@ -66,11 +65,7 @@ class VelolinkAnalogEntity(SensorEntity):
     _attr_should_poll = False
 
     def __init__(
-        self,
-        hub: VelolinkHub,
-        storage: VelolinkStorage,
-        node: VelolinkNode,
-        ch: int
+        self, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
     ) -> None:
         """Initialize entity."""
         self._hub = hub
@@ -128,8 +123,7 @@ class VelolinkAnalogEntity(SensorEntity):
 
         identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
         device_name = (
-            custom_name or
-            f"Velolink {self._node.kind.title()} {self._node.address}"
+            custom_name or f"Velolink {self._node.kind.title()} {self._node.address}"
         )
 
         return DeviceInfo(
@@ -144,6 +138,7 @@ class VelolinkAnalogEntity(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Handle entity added."""
+
         @callback
         def _on_change(val: float) -> None:
             self._value = val
