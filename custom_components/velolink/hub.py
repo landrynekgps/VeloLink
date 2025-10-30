@@ -317,7 +317,7 @@ class TcpTransport:
             for _ in range(8):
                 crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
         return crc
-# ========== Main Hub ==========
+        # ========== Main Hub ==========
 class VelolinkHub:
     """Velolink hub managing transports and devices."""
     # pylint: disable=too-many-instance-attributes
@@ -684,4 +684,105 @@ class VelolinkHub:
             kind_map = {
                 0x00: "input", 0x01: "output",
                 0x02: "pwm", 0x03: "analog",
-                0x0A: "veloswitch", 
+                0x0A: "veloswitch", 0x0B: "velodimmer",
+                0x0C: "velomotion", 0x0D: "velosensor",
+            }
+            kind = kind_map.get(kind_code, "unknown")
+            channels = payload[1]
+            capabilities = payload[2]
+            hw_ver = f"{payload[3]}.{payload[4]}"
+            sw_ver = f"{payload[5]}.{payload[6]}.{payload[7]}"
+
+            offset = 8
+            model, serial, area = None, None, None
+
+            if offset < len(payload):
+                model_len = payload[offset]
+                offset += 1
+                if offset + model_len <= len(payload):
+                    model = payload[offset:offset+model_len].decode(
+                        'ascii', errors='ignore'
+                    )
+                    offset += model_len
+
+            if offset < len(payload):
+                serial_len = payload[offset]
+                offset += 1
+                if offset + serial_len <= len(payload):
+                    serial = payload[offset:offset+serial_len].decode(
+                        'ascii', errors='ignore'
+                    )
+                    offset += serial_len
+
+            if offset < len(payload):
+                area_len = payload[offset]
+                offset += 1
+                if offset + area_len <= len(payload):
+                    area = payload[offset:offset+area_len].decode(
+                        'utf-8', errors='ignore'
+                    )
+
+            return {
+                "type": "HELLO",
+                "addr": addr,
+                "kind": kind,
+                "channels": channels,
+                "capabilities": capabilities,
+                "hw_version": hw_ver,
+                "sw_version": sw_ver,
+                "model": model,
+                "serial_number": serial,
+                "area": area,
+            }
+
+        if func == FunctionCode.INPUT_CHANGE:
+            return {
+                "type": "INPUT_CHANGE",
+                "addr": addr,
+                "ch": payload[0],
+                "value": payload[1]
+            }
+
+        if func == FunctionCode.OUTPUT_STATE:
+            return {
+                "type": "OUTPUT_STATE",
+                "addr": addr,
+                "ch": payload[0],
+                "value": payload[1]
+            }
+
+        if func == FunctionCode.PWM_STATE:
+            return {
+                "type": "PWM_STATE",
+                "addr": addr,
+                "ch": payload[0],
+                "value": payload[1]
+            }
+
+        if func == FunctionCode.ANALOG_SAMPLE:
+            val = payload[1] | (payload[2] << 8) if len(payload) >= 3 else 0
+            return {
+                "type": "ANALOG_SAMPLE",
+                "addr": addr,
+                "ch": payload[0],
+                "value": val / 1000.0
+            }
+
+        if func == FunctionCode.BUTTON_EVENT:
+            return {
+                "type": "BUTTON_EVENT",
+                "addr": addr,
+                "ch": payload[0],
+                "pressed": bool(payload[1])
+            }
+
+        if func == FunctionCode.ENCODER_EVENT:
+            delta = int.from_bytes([payload[1]], 'little', signed=True)
+            return {
+                "type": "ENCODER_EVENT",
+                "addr": addr,
+                "ch": payload[0],
+                "delta": delta
+            }
+
+        raise ValueError(f"unknown func: {func:02X}")
