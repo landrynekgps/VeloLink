@@ -1,7 +1,5 @@
 {
   "name": "Velolink",
   "render_readme": true,
-  "domains": ["binary_sensor", "switch", "light", "sensor", "button"],
-  "iot_class": "Local Push",
   "homeassistant": "2024.1.0"
 }
