@@ -34,7 +34,9 @@ async def async_setup_entry(
 ):
     """Set up lights."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
+    storage: VelolinkStorage = hass.data[DOMAIN][
+        f"{entry.entry_id}_storage"
+    ]
     created: set[str] = set()
 
     @callback
@@ -46,11 +48,13 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(VelolinkLightEntity(hub, storage, node, ch))
-            
+                entities.append(
+                    VelolinkLightEntity(hub, storage, node, ch)
+                )
+
             if entities:
                 async_add_entities(entities)
-        
+
         elif node.kind == NODE_KIND_VELODIMMER:
             entities = []
             for ch in range(node.channels):
@@ -59,7 +63,7 @@ async def async_setup_entry(
                     continue
                 created.add(uid)
                 entities.append(VeloDimmerEntity(hub, storage, node, ch))
-            
+
             if entities:
                 async_add_entities(entities)
 
@@ -71,7 +75,7 @@ async def async_setup_entry(
 
 class VelolinkLightEntity(LightEntity):
     """Light entity for PWM output."""
-    
+
     _attr_should_poll = False
 
     def __init__(
@@ -131,10 +135,16 @@ class VelolinkLightEntity(LightEntity):
         custom_name = self._storage.get_device_name(
             self._node.bus_id, self._node.address
         )
-        
+
+        identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
+        device_name = (
+            custom_name or
+            f"Velolink {self._node.kind.title()} {self._node.address}"
+        )
+
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._node.bus_id}-{self._node.address}")},
-            name=custom_name or f"Velolink {self._node.kind.title()} {self._node.address}",
+            identifiers={identifier},
+            name=device_name,
             manufacturer=self._node.manufacturer,
             model=self._node.model or "IO-PWM",
             sw_version=self._node.sw_version,
@@ -146,12 +156,13 @@ class VelolinkLightEntity(LightEntity):
         """Turn on light."""
         if ATTR_BRIGHTNESS in kwargs:
             self._brightness = kwargs[ATTR_BRIGHTNESS]
-        
+
         if not self._is_on and ATTR_BRIGHTNESS not in kwargs:
             self._brightness = 255
-        
+
         await self._hub.async_set_pwm(
-            self._node.bus_id, self._node.address, self._ch, self._brightness
+            self._node.bus_id, self._node.address,
+            self._ch, self._brightness
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -167,7 +178,7 @@ class VelolinkLightEntity(LightEntity):
             self._brightness = max(1, min(255, val))
             self._is_on = self._brightness > 0
             self.async_write_ha_state()
-        
+
         self._unsub = self._hub.subscribe_pwm(
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
@@ -181,7 +192,8 @@ class VelolinkLightEntity(LightEntity):
 
 class VeloDimmerEntity(LightEntity):
     """VeloDimmer - wall dimmer with encoder and button."""
-    
+    # pylint: disable=too-many-instance-attributes
+
     _attr_should_poll = False
 
     def __init__(
@@ -196,11 +208,11 @@ class VeloDimmerEntity(LightEntity):
         self._storage = storage
         self._node = node
         self._ch = ch
-        
+
         self._is_on = False
         self._brightness = 255
         self._last_encoder_time = None
-        
+
         self._unsub_button: Callable[[], None] | None = None
         self._unsub_encoder: Callable[[], None] | None = None
         self._unsub_pwm: Callable[[], None] | None = None
@@ -246,9 +258,11 @@ class VeloDimmerEntity(LightEntity):
         custom_name = self._storage.get_device_name(
             self._node.bus_id, self._node.address
         )
-        
+
+        identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
+
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._node.bus_id}-{self._node.address}")},
+            identifiers={identifier},
             name=custom_name or f"VeloDimmer {self._node.address}",
             manufacturer=self._node.manufacturer,
             model=self._node.model or "VeloDimmer-1",
@@ -260,23 +274,28 @@ class VeloDimmerEntity(LightEntity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return extra attributes."""
+        last_encoder = (
+            self._last_encoder_time.isoformat()
+            if self._last_encoder_time else None
+        )
         return {
             "bus": self._node.bus_id,
             "address": self._node.address,
             "channel": self._ch,
-            "last_encoder": self._last_encoder_time.isoformat() if self._last_encoder_time else None,
+            "last_encoder": last_encoder,
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on light."""
         if ATTR_BRIGHTNESS in kwargs:
             self._brightness = kwargs[ATTR_BRIGHTNESS]
-        
+
         if not self._is_on and ATTR_BRIGHTNESS not in kwargs:
             self._brightness = 255
-        
+
         await self._hub.async_set_pwm(
-            self._node.bus_id, self._node.address, self._ch, self._brightness
+            self._node.bus_id, self._node.address,
+            self._ch, self._brightness
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -292,11 +311,12 @@ class VeloDimmerEntity(LightEntity):
             self._brightness = max(1, min(255, val))
             self._is_on = self._brightness > 0
             self.async_write_ha_state()
-        
+
         self._unsub_pwm = self._hub.subscribe_pwm(
-            self._node.bus_id, self._node.address, self._ch, _on_pwm_change
+            self._node.bus_id, self._node.address,
+            self._ch, _on_pwm_change
         )
-        
+
         @callback
         def _on_button(pressed: bool) -> None:
             if pressed:
@@ -304,32 +324,34 @@ class VeloDimmerEntity(LightEntity):
                     self.hass.async_create_task(self.async_turn_off())
                 else:
                     self.hass.async_create_task(self.async_turn_on())
-        
+
         self._unsub_button = self._hub.subscribe_button(
             self._node.bus_id, self._node.address, self._ch, _on_button
         )
-        
+
         @callback
         def _on_encoder(delta: int) -> None:
             self._last_encoder_time = dt_util.utcnow()
-            
+
             if not self._is_on:
                 self._brightness = 50
                 self.hass.async_create_task(self.async_turn_on())
                 return
-            
+
             new_brightness = self._brightness + (delta * 5)
             new_brightness = max(1, min(255, new_brightness))
-            
+
             self._brightness = new_brightness
             self.hass.async_create_task(
                 self._hub.async_set_pwm(
-                    self._node.bus_id, self._node.address, self._ch, new_brightness
+                    self._node.bus_id, self._node.address,
+                    self._ch, new_brightness
                 )
             )
-        
+
         self._unsub_encoder = self._hub.subscribe_encoder(
-            self._node.bus_id, self._node.address, self._ch, _on_encoder
+            self._node.bus_id, self._node.address,
+            self._ch, _on_encoder
         )
 
     async def async_will_remove_from_hass(self) -> None:
