@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -10,8 +10,6 @@ from homeassistant.helpers.storage import Store
 from .const import STORAGE_VERSION, STORAGE_KEY, POLARITY_NO
 
 _LOGGER = logging.getLogger(__name__)
-
-ChannelKey = Tuple[str, int, str, int]  # (bus_id, addr, type, ch)
 
 
 class VelolinkStorage:
@@ -28,11 +26,11 @@ class VelolinkStorage:
         """Load data from storage."""
         if self._loaded:
             return
-        
+
         data = await self._store.async_load()
         if data is None:
             data = {"channels": {}, "devices": {}}
-        
+
         self._data = data
         self._loaded = True
         _LOGGER.info(
@@ -65,17 +63,18 @@ class VelolinkStorage:
         polarity: str | None = None,
     ) -> None:
         """Set channel configuration."""
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         key = f"{bus_id}-{addr}-{ch_type}-{ch}"
         if "channels" not in self._data:
             self._data["channels"] = {}
-        
+
         cfg = self._data["channels"].setdefault(key, {})
-        
+
         if device_class is not None:
             cfg["device_class"] = device_class
         if polarity is not None:
             cfg["polarity"] = polarity
-        
+
         await self.async_save()
         _LOGGER.info("Updated channel %s: %s", key, cfg)
 
@@ -91,7 +90,7 @@ class VelolinkStorage:
         key = f"{bus_id}-{addr}"
         if "devices" not in self._data:
             self._data["devices"] = {}
-        
+
         self._data["devices"].setdefault(key, {})["name"] = name
         await self.async_save()
         _LOGGER.info("Set device name for %s: %s", key, name)
