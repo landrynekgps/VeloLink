@@ -1,4 +1,5 @@
 """Light platform for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -34,9 +35,7 @@ async def async_setup_entry(
 ):
     """Set up lights."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][
-        f"{entry.entry_id}_storage"
-    ]
+    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
     created: set[str] = set()
 
     @callback
@@ -48,9 +47,7 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(
-                    VelolinkLightEntity(hub, storage, node, ch)
-                )
+                entities.append(VelolinkLightEntity(hub, storage, node, ch))
 
             if entities:
                 async_add_entities(entities)
@@ -75,6 +72,7 @@ async def async_setup_entry(
 
 class VelolinkLightEntity(LightEntity):
     """Light entity for PWM output."""
+
     # pylint: disable=abstract-method
 
     _attr_should_poll = False
@@ -84,7 +82,7 @@ class VelolinkLightEntity(LightEntity):
         hub: VelolinkHub,
         storage: VelolinkStorage,
         node: VelolinkNode,
-        ch: int
+        ch: int,
     ) -> None:
         """Initialize entity."""
         self._hub = hub
@@ -139,8 +137,8 @@ class VelolinkLightEntity(LightEntity):
 
         identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
         device_name = (
-            custom_name or
-            f"Velolink {self._node.kind.title()} {self._node.address}"
+            custom_name
+            or f"Velolink {self._node.kind.title()} {self._node.address}"
         )
 
         return DeviceInfo(
@@ -162,8 +160,7 @@ class VelolinkLightEntity(LightEntity):
             self._brightness = 255
 
         await self._hub.async_set_pwm(
-            self._node.bus_id, self._node.address,
-            self._ch, self._brightness
+            self._node.bus_id, self._node.address, self._ch, self._brightness
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -174,6 +171,7 @@ class VelolinkLightEntity(LightEntity):
 
     async def async_added_to_hass(self) -> None:
         """Handle entity added."""
+
         @callback
         def _on_change(val: int) -> None:
             self._brightness = max(1, min(255, val))
@@ -193,6 +191,7 @@ class VelolinkLightEntity(LightEntity):
 
 class VeloDimmerEntity(LightEntity):
     """VeloDimmer - wall dimmer with encoder and button."""
+
     # pylint: disable=too-many-instance-attributes,abstract-method
 
     _attr_should_poll = False
@@ -202,7 +201,7 @@ class VeloDimmerEntity(LightEntity):
         hub: VelolinkHub,
         storage: VelolinkStorage,
         node: VelolinkNode,
-        ch: int
+        ch: int,
     ) -> None:
         """Initialize entity."""
         self._hub = hub
@@ -276,8 +275,7 @@ class VeloDimmerEntity(LightEntity):
     def extra_state_attributes(self) -> dict:
         """Return extra attributes."""
         last_encoder = (
-            self._last_encoder_time.isoformat()
-            if self._last_encoder_time else None
+            self._last_encoder_time.isoformat() if self._last_encoder_time else None
         )
         return {
             "bus": self._node.bus_id,
@@ -295,8 +293,7 @@ class VeloDimmerEntity(LightEntity):
             self._brightness = 255
 
         await self._hub.async_set_pwm(
-            self._node.bus_id, self._node.address,
-            self._ch, self._brightness
+            self._node.bus_id, self._node.address, self._ch, self._brightness
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -307,6 +304,7 @@ class VeloDimmerEntity(LightEntity):
 
     async def async_added_to_hass(self) -> None:
         """Handle entity added."""
+
         @callback
         def _on_pwm_change(val: int) -> None:
             self._brightness = max(1, min(255, val))
@@ -314,8 +312,7 @@ class VeloDimmerEntity(LightEntity):
             self.async_write_ha_state()
 
         self._unsub_pwm = self._hub.subscribe_pwm(
-            self._node.bus_id, self._node.address,
-            self._ch, _on_pwm_change
+            self._node.bus_id, self._node.address, self._ch, _on_pwm_change
         )
 
         @callback
@@ -345,14 +342,12 @@ class VeloDimmerEntity(LightEntity):
             self._brightness = new_brightness
             self.hass.async_create_task(
                 self._hub.async_set_pwm(
-                    self._node.bus_id, self._node.address,
-                    self._ch, new_brightness
+                    self._node.bus_id, self._node.address, self._ch, new_brightness
                 )
             )
 
         self._unsub_encoder = self._hub.subscribe_encoder(
-            self._node.bus_id, self._node.address,
-            self._ch, _on_encoder
+            self._node.bus_id, self._node.address, self._ch, _on_encoder
         )
 
     async def async_will_remove_from_hass(self) -> None:
