@@ -73,9 +73,7 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(
-                    CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL
-                ): vol.In(
+                vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL): vol.In(
                     {
                         CONN_TYPE_SERIAL: "Serial (RPi HAT / USB)",
                         CONN_TYPE_TCP: "TCP (VeloGateway)",
@@ -116,25 +114,17 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_PORT1): vol.In(
-                    ports if ports else ["/dev/ttyAMA0"]
-                ),
+                vol.Required(CONF_PORT1): vol.In(ports if ports else ["/dev/ttyAMA0"]),
                 vol.Optional(CONF_PORT2): vol.In([""] + ports),
-                vol.Required(
-                    CONF_BAUDRATE, default=DEFAULT_BAUDRATE
-                ): cv.positive_int,
-                vol.Required(
-                    CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE
-                ): bool,
+                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
+                vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
                 vol.Required(
                     CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
                 ): bool,
             }
         )
 
-        return self.async_show_form(
-            step_id="serial", data_schema=schema, errors=errors
-        )
+        return self.async_show_form(step_id="serial", data_schema=schema, errors=errors)
 
     async def async_step_tcp(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -180,18 +170,14 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_GATEWAY_HOST): str,
-                vol.Required(
-                    CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT
-                ): cv.port,
+                vol.Required(CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT): cv.port,
                 vol.Required(
                     CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
                 ): bool,
             }
         )
 
-        return self.async_show_form(
-            step_id="tcp", data_schema=schema, errors=errors
-        )
+        return self.async_show_form(step_id="tcp", data_schema=schema, errors=errors)
 
     @staticmethod
     @callback
@@ -260,7 +246,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
             # Wyświetl wynik
             if new_devices > 0:
-                message = f"Znaleziono {new_devices} nowych urządzeń! Łącznie: {after_count}"
+                message = (
+                    f"Znaleziono {new_devices} nowych urządzeń! Łącznie: {after_count}"
+                )
             else:
                 message = f"Nie znaleziono nowych urządzeń. Łącznie: {after_count}"
 
@@ -282,9 +270,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
         schema = vol.Schema(
             {
-                vol.Required("bus_selection", default="all"): vol.In(
-                    bus_options
-                ),
+                vol.Required("bus_selection", default="all"): vol.In(bus_options),
             }
         )
 
@@ -323,7 +309,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         for (bus_id, addr), node in hub._nodes.items():
             if node.kind in ["input", "veloswitch", "velomotion"]:
                 for ch in range(node.channels):
-                    label = f"{node.model or node.kind.upper()} @ {bus_id}:{addr} → IN:{ch}"
+                    label = (
+                        f"{node.model or node.kind.upper()} @ {bus_id}:{addr} → IN:{ch}"
+                    )
                     channels.append((f"{bus_id}:{addr}:in:{ch}", label))
             elif node.kind == "output":
                 for ch in range(node.channels):
