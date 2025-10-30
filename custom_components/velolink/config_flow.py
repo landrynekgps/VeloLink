@@ -1,4 +1,5 @@
 """Config flow for Velolink."""
+
 from __future__ import annotations
 
 import logging
@@ -92,21 +93,22 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         options = {CONN_CHOICE_TCP: "TCP (VeloGateway)"}
         if has_rpi_hat_port:
             options[CONN_CHOICE_RPI_HAT] = "Raspberry Pi HAT"
-        
+
         # Zawsze pokazuj opcję USB, jeśli są jakiekolwiek porty
         if all_ports:
-             options[CONN_CHOICE_USB] = "Adapter USB-RS485"
-
+            options[CONN_CHOICE_USB] = "Adapter USB-RS485"
 
         schema = vol.Schema({vol.Required("connection_choice"): vol.In(options)})
 
         return self.async_show_form(step_id="user", data_schema=schema)
 
-    async def _create_serial_entry(self, user_input: dict[str, Any], title: str) -> FlowResult:
+    async def _create_serial_entry(
+        self, user_input: dict[str, Any], title: str
+    ) -> FlowResult:
         """Helper to create a serial connection entry."""
         if user_input.get(CONF_PORT2) == "":
             user_input.pop(CONF_PORT2, None)
-        
+
         port1 = user_input.get(CONF_PORT1)
         port2 = user_input.get(CONF_PORT2)
 
@@ -129,21 +131,29 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle RPi HAT serial connection setup."""
         all_ports = await self.hass.async_add_executor_job(_list_serial_ports)
-        hat_ports = {p: d for p, d in all_ports.items() if "ttyAMA" in p or "serial" in p}
-        
+        hat_ports = {
+            p: d for p, d in all_ports.items() if "ttyAMA" in p or "serial" in p
+        }
+
         if not hat_ports:
             return self.async_abort(reason="no_hat_ports_found")
 
         if user_input is not None:
-            user_input[CONF_PORT1] = hat_ports.popitem()[0] # Zawsze bierz pierwszy znaleziony port HAT
+            user_input[CONF_PORT1] = hat_ports.popitem()[
+                0
+            ]  # Zawsze bierz pierwszy znaleziony port HAT
             return await self._create_serial_entry(user_input, "Velolink RPi HAT")
 
         # Dla HAT nie pytamy o port, zakładamy że jest jeden
-        schema = vol.Schema({
-            vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
-            vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
-            vol.Required(CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP): bool,
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
+                vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
+                vol.Required(
+                    CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+                ): bool,
+            }
+        )
 
         return self.async_show_form(step_id="serial_hat", data_schema=schema)
 
@@ -152,22 +162,30 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle USB adapter serial connection setup."""
         all_ports = await self.hass.async_add_executor_job(_list_serial_ports)
-        usb_ports = {p: d for p, d in all_ports.items() if "ttyUSB" in p or "ttyACM" in p}
+        usb_ports = {
+            p: d for p, d in all_ports.items() if "ttyUSB" in p or "ttyACM" in p
+        }
 
         if not usb_ports:
             return self.async_abort(reason="no_usb_ports_found")
-            
+
         if user_input is not None:
-            return await self._create_serial_entry(user_input, f"Velolink USB ({user_input[CONF_PORT1]})")
-        
-        schema = vol.Schema({
-            vol.Required(CONF_PORT1): vol.In(usb_ports),
-            vol.Optional(CONF_PORT2): vol.In({"": "(brak)"} | usb_ports),
-            vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
-            vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
-            vol.Required(CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP): bool,
-        })
-        
+            return await self._create_serial_entry(
+                user_input, f"Velolink USB ({user_input[CONF_PORT1]})"
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PORT1): vol.In(usb_ports),
+                vol.Optional(CONF_PORT2): vol.In({"": "(brak)"} | usb_ports),
+                vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
+                vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
+                vol.Required(
+                    CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+                ): bool,
+            }
+        )
+
         return self.async_show_form(step_id="serial_usb", data_schema=schema)
 
     async def async_step_tcp(
@@ -187,15 +205,15 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input,
             )
 
-        schema = vol.Schema({
-            vol.Required(CONF_GATEWAY_HOST): str,
-            vol.Required(
-                CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT
-            ): cv.port,
-            vol.Required(
-                CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
-            ): bool,
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_GATEWAY_HOST): str,
+                vol.Required(CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT): cv.port,
+                vol.Required(
+                    CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+                ): bool,
+            }
+        )
 
         return self.async_show_form(step_id="tcp", data_schema=schema)
 
@@ -204,5 +222,6 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         """Get options flow handler."""
         return VelolinkOptionsFlow(config_entry)
+
 
 # ... reszta pliku (VelolinkOptionsFlow) pozostaje bez zmian ...
