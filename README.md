@@ -5,8 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/landrynekgps/VeloLink.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/stargazers)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/graphs/commit-activity)
 
-![Velolink Logo](https://raw.githubusercontent.com/landrynekgps/custom_components/velolink
-/icon.png)
+![Velolink Logo](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/icon.png)
 
 **Velolink** to system automatyki domowej wykorzystujący **magistralę RS485** do szybkiej i niezawodnej komunikacji z modułami wejść/wyjść, przełącznikami ściennymi, ściemniaczami i czujnikami.
 
@@ -31,16 +30,16 @@
 <summary>👉 Kliknij aby zobaczyć zrzuty ekranu</summary>
 
 ### Główny panel
-![Dashboard](docs/images/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/docs/images/dashboard.png)
 
 ### Konfiguracja przez UI
-![Config Flow](docs/images/config-flow.png)
+![Config Flow](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/docs/images/config-flow.png)
 
 ### Wykryte urządzenia
-![Devices](docs/images/devices.png)
+![Devices](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/docs/images/devices.png)
 
 ### Edycja Device Class
-![Device Class](docs/images/device-class-config.png)
+![Device Class](https://raw.githubusercontent.com/landrynekgps/VeloLink/main/docs/images/device-class-config.png)
 
 </details>
 
