@@ -47,7 +47,7 @@
 
 ## 🎛️ Wspierane urządzenia
 
-### 🔧 Moduły W rozdzielnicy (magistrala RS485)
+### 🔧 Moduły w rozdzielnicy (magistrala RS485)
 
 | Moduł | Typ | Kanały | Zastosowanie |
 |-------|-----|--------|--------------|
