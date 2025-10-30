@@ -1,0 +1,69 @@
+[MAIN]
+# Python code to execute, usually for sys.path manipulation
+init-hook='import sys; sys.path.append(".")'
+
+# Files or directories to be skipped
+ignore=CVS,.git,__pycache__,.vscode,.github
+
+# Use multiple processes to speed up Pylint
+jobs=0
+
+[MESSAGES CONTROL]
+# Disable specific warnings that are acceptable for HA integrations
+disable=
+    duplicate-code,           # Platforms naturally have similar structures
+    too-many-statements,      # Setup functions often have many statements
+    too-many-locals,          # Complex setup requires many variables
+    too-many-branches,        # Protocol parsing requires many branches
+    too-many-return-statements, # Protocol handlers need many returns
+    abstract-method,          # HA recognizes async_turn_on/off, async_press
+    import-error,             # External dependencies (pyserial) not in lint env
+    import-outside-toplevel,  # Lazy imports for optional dependencies
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=100
+
+# Maximum number of lines in a module
+max-module-lines=1000
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=7
+
+# Maximum number of attributes for a class
+max-attributes=12
+
+# Maximum number of boolean expressions in an if statement
+max-bool-expr=5
+
+# Maximum number of statements in function / method body
+max-statements=60
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=10
+
+# Ignore imports when computing similarities
+ignore-imports=yes
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,j,k,ex,Run,_,id,ch,x,y,z
+
+# Regular expression matching correct constant names
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+[TYPECHECK]
+# List of members which are set dynamically (HA specific)
+generated-members=async_create_task,async_add_executor_job
+
+[REPORTS]
+# Set the output format
+output-format=colorized
+
+# Tells whether to display a full report or only the messages
+reports=no
+
+# Activate the evaluation score
+score=yes
