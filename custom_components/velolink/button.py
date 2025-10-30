@@ -22,19 +22,25 @@ async def async_setup_entry(
 ):
     """Set up buttons."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    
+
     entities = [
-        VelolinkDiscoveryButton(hub, entry.entry_id, "bus1", "Skanuj Bus 1"),
-        VelolinkDiscoveryButton(hub, entry.entry_id, "bus2", "Skanuj Bus 2"),
-        VelolinkDiscoveryButton(hub, entry.entry_id, "all", "Skanuj wszystkie"),
+        VelolinkDiscoveryButton(
+            hub, entry.entry_id, "bus1", "Skanuj Bus 1"
+        ),
+        VelolinkDiscoveryButton(
+            hub, entry.entry_id, "bus2", "Skanuj Bus 2"
+        ),
+        VelolinkDiscoveryButton(
+            hub, entry.entry_id, "all", "Skanuj wszystkie"
+        ),
     ]
-    
+
     async_add_entities(entities)
 
 
 class VelolinkDiscoveryButton(ButtonEntity):
     """Button to trigger discovery."""
-    
+
     _attr_should_poll = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -61,7 +67,7 @@ class VelolinkDiscoveryButton(ButtonEntity):
     async def async_press(self) -> None:
         """Handle button press."""
         _LOGGER.info("Discovery triggered for: %s", self._target)
-        
+
         if self._target == "bus1":
             await self._hub.async_discovery_bus("bus1")
         elif self._target == "bus2":
