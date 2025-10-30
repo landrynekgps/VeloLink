@@ -73,7 +73,7 @@ SERVICE_SET_DEVICE_NAME_SCHEMA = vol.Schema({
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Velolink from a config entry."""
-    # pylint: disable=too-many-locals,too-many-statements
+    pylint: disable=too-many-locals,too-many-statements
     connection_type = entry.data.get(CONF_CONNECTION_TYPE, CONN_TYPE_SERIAL)
     buses = {}
 
