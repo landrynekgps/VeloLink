@@ -75,7 +75,8 @@ async def async_setup_entry(
 
 class VelolinkLightEntity(LightEntity):
     """Light entity for PWM output."""
-     pylint: disable=abstract-method  # ← DODAJ TĘ LINIĘ
+    # pylint: disable=abstract-method
+
     _attr_should_poll = False
 
     def __init__(
