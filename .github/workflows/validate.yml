@@ -46,6 +46,8 @@ jobs:
   black:
     runs-on: ubuntu-latest
     name: Auto-format with Black
+    permissions:  # ← DODAJ TO
+      contents: write  # ← I TO
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
