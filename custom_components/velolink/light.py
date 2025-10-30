@@ -192,7 +192,7 @@ class VelolinkLightEntity(LightEntity):
 
 class VeloDimmerEntity(LightEntity):
     """VeloDimmer - wall dimmer with encoder and button."""
-    # pylint: disable=too-many-instance-attributes
+     pylint: disable=too-many-instance-attributes
 
     _attr_should_poll = False
 
