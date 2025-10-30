@@ -1,1 +1,76 @@
-
+{
+  "title": "Velolink",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Velolink",
+        "description": "Choose connection type to Velolink network",
+        "data": {
+          "connection_type": "Connection type"
+        }
+      },
+      "serial": {
+        "title": "Serial connection",
+        "description": "Configure RS485 ports (RPi HAT / USB)",
+        "data": {
+          "port1": "RS485 Port #1 (Bus 1)",
+          "port2": "RS485 Port #2 (Bus 2, optional)",
+          "baudrate": "Baudrate",
+          "rts_toggle": "RTS toggle",
+          "scan_on_startup": "Scan devices on startup"
+        }
+      },
+      "tcp": {
+        "title": "VeloGateway (TCP/IP)",
+        "description": "Connect to VeloGateway over network",
+        "data": {
+          "gateway_host": "VeloGateway IP address",
+          "gateway_port": "TCP port",
+          "scan_on_startup": "Scan devices on startup"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to VeloGateway",
+      "ports_identical": "RS485 ports must be different",
+      "unknown": "Unknown error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_channels": "No channels available for configuration",
+      "no_devices": "No devices detected"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Velolink Options",
+        "menu_options": {
+          "edit_channel": "Edit channel",
+          "edit_device_name": "Change device name"
+        }
+      },
+      "edit_channel": {
+        "title": "Select channel",
+        "data": {
+          "channel": "Channel"
+        }
+      },
+      "configure_channel": {
+        "title": "Channel configuration",
+        "description": "Bus: {bus_id}, Address: {address}, Channel: {channel}",
+        "data": {
+          "device_class": "Device class",
+          "polarity": "Polarity"
+        }
+      },
+      "edit_device_name": {
+        "title": "Device name",
+        "data": {
+          "device": "Device",
+          "name": "New name"
+        }
+      }
+    }
+  }
+}
