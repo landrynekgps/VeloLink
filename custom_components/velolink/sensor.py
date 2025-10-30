@@ -33,14 +33,16 @@ async def async_setup_entry(
 ):
     """Set up sensors."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
+    storage: VelolinkStorage = hass.data[DOMAIN][
+        f"{entry.entry_id}_storage"
+    ]
     created: set[str] = set()
 
     @callback
     def _handle_new_node(node: VelolinkNode) -> None:
         if node.kind not in (NODE_KIND_ANALOG, NODE_KIND_VELOSENSOR):
             return
-        
+
         entities = []
         for ch in range(node.channels):
             uid = f"{node.bus_id}-{node.address}-ain-{ch}"
@@ -48,7 +50,7 @@ async def async_setup_entry(
                 continue
             created.add(uid)
             entities.append(VelolinkAnalogEntity(hub, storage, node, ch))
-        
+
         if entities:
             async_add_entities(entities)
 
@@ -60,7 +62,7 @@ async def async_setup_entry(
 
 class VelolinkAnalogEntity(SensorEntity):
     """Sensor for Velolink analog input."""
-    
+
     _attr_should_poll = False
 
     def __init__(
@@ -91,11 +93,11 @@ class VelolinkAnalogEntity(SensorEntity):
         )
         if custom_name:
             return f"{custom_name} AIN {self._ch}"
-        
+
         if self._node.kind == NODE_KIND_VELOSENSOR:
             return f"VeloSensor {self._node.address}:{self._ch}"
-        else:
-            return f"Velolink AIN {self._node.address}:{self._ch}"
+
+        return f"Velolink AIN {self._node.address}:{self._ch}"
 
     @property
     def native_value(self) -> float | None:
@@ -123,10 +125,16 @@ class VelolinkAnalogEntity(SensorEntity):
         custom_name = self._storage.get_device_name(
             self._node.bus_id, self._node.address
         )
-        
+
+        identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
+        device_name = (
+            custom_name or
+            f"Velolink {self._node.kind.title()} {self._node.address}"
+        )
+
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._node.bus_id}-{self._node.address}")},
-            name=custom_name or f"Velolink {self._node.kind.title()} {self._node.address}",
+            identifiers={identifier},
+            name=device_name,
             manufacturer=self._node.manufacturer,
             model=self._node.model or "IO-ANALOG",
             sw_version=self._node.sw_version,
@@ -140,7 +148,7 @@ class VelolinkAnalogEntity(SensorEntity):
         def _on_change(val: float) -> None:
             self._value = val
             self.async_write_ha_state()
-        
+
         self._unsub = self._hub.subscribe_analog(
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
