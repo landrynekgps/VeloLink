@@ -5,7 +5,10 @@ import logging
 from typing import Callable, Final
 
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
+from homeassistant.components.switch import (
+    SwitchEntity,
+    SwitchDeviceClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
@@ -30,14 +33,16 @@ async def async_setup_entry(
 ):
     """Set up switches."""
     hub: VelolinkHub = hass.data[DOMAIN][entry.entry_id]
-    storage: VelolinkStorage = hass.data[DOMAIN][f"{entry.entry_id}_storage"]
+    storage: VelolinkStorage = hass.data[DOMAIN][
+        f"{entry.entry_id}_storage"
+    ]
     created: set[str] = set()
 
     @callback
     def _handle_new_node(node: VelolinkNode) -> None:
         if node.kind != NODE_KIND_OUTPUT:
             return
-        
+
         entities = []
         for ch in range(node.channels):
             uid = f"{node.bus_id}-{node.address}-out-{ch}"
@@ -45,7 +50,7 @@ async def async_setup_entry(
                 continue
             created.add(uid)
             entities.append(VelolinkOutputEntity(hub, storage, node, ch))
-        
+
         if entities:
             async_add_entities(entities)
 
@@ -57,7 +62,8 @@ async def async_setup_entry(
 
 class VelolinkOutputEntity(SwitchEntity):
     """Switch for Velolink output."""
-    
+    # pylint: disable=too-many-instance-attributes
+
     _attr_should_poll = False
 
     def __init__(
@@ -74,7 +80,7 @@ class VelolinkOutputEntity(SwitchEntity):
         self._ch = ch
         self._state = False
         self._unsub: Callable[[], None] | None = None
-        
+
         self._load_config()
 
     def _load_config(self) -> None:
@@ -118,10 +124,16 @@ class VelolinkOutputEntity(SwitchEntity):
         custom_name = self._storage.get_device_name(
             self._node.bus_id, self._node.address
         )
-        
+
+        identifier = (DOMAIN, f"{self._node.bus_id}-{self._node.address}")
+        device_name = (
+            custom_name or
+            f"Velolink {self._node.kind.title()} {self._node.address}"
+        )
+
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._node.bus_id}-{self._node.address}")},
-            name=custom_name or f"Velolink {self._node.kind.title()} {self._node.address}",
+            identifiers={identifier},
+            name=device_name,
             manufacturer=self._node.manufacturer,
             model=self._node.model or "IO-OUTPUT",
             sw_version=self._node.sw_version,
@@ -142,16 +154,18 @@ class VelolinkOutputEntity(SwitchEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on."""
-        physical_state = False if self._polarity == POLARITY_NC else True
+        physical_state = self._polarity != POLARITY_NC
         await self._hub.async_set_output(
-            self._node.bus_id, self._node.address, self._ch, physical_state
+            self._node.bus_id, self._node.address,
+            self._ch, physical_state
         )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off."""
-        physical_state = True if self._polarity == POLARITY_NC else False
+        physical_state = self._polarity == POLARITY_NC
         await self._hub.async_set_output(
-            self._node.bus_id, self._node.address, self._ch, physical_state
+            self._node.bus_id, self._node.address,
+            self._ch, physical_state
         )
 
     async def async_added_to_hass(self) -> None:
@@ -160,7 +174,7 @@ class VelolinkOutputEntity(SwitchEntity):
         def _on_change(val: bool) -> None:
             self._state = val
             self.async_write_ha_state()
-        
+
         self._unsub = self._hub.subscribe_output(
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
