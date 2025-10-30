@@ -1,4 +1,5 @@
 """Velolink integration for Home Assistant."""
+
 from __future__ import annotations
 
 import logging
@@ -53,27 +54,30 @@ PLATFORMS: list[Platform] = [
 ]
 
 # Service schemas
-SERVICE_SET_CHANNEL_CONFIG_SCHEMA = vol.Schema({
-    vol.Required(ATTR_BUS_ID): cv.string,
-    vol.Required(ATTR_ADDRESS): cv.positive_int,
-    vol.Required(ATTR_CHANNEL): cv.positive_int,
-    vol.Optional(ATTR_DEVICE_CLASS): vol.In(
-        list(DEVICE_CLASS_INPUT_MAP.keys()) +
-        list(DEVICE_CLASS_OUTPUT_MAP.keys())
-    ),
-    vol.Optional(ATTR_POLARITY): vol.In([POLARITY_NO, POLARITY_NC]),
-})
+SERVICE_SET_CHANNEL_CONFIG_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_BUS_ID): cv.string,
+        vol.Required(ATTR_ADDRESS): cv.positive_int,
+        vol.Required(ATTR_CHANNEL): cv.positive_int,
+        vol.Optional(ATTR_DEVICE_CLASS): vol.In(
+            list(DEVICE_CLASS_INPUT_MAP.keys()) + list(DEVICE_CLASS_OUTPUT_MAP.keys())
+        ),
+        vol.Optional(ATTR_POLARITY): vol.In([POLARITY_NO, POLARITY_NC]),
+    }
+)
 
-SERVICE_SET_DEVICE_NAME_SCHEMA = vol.Schema({
-    vol.Required(ATTR_BUS_ID): cv.string,
-    vol.Required(ATTR_ADDRESS): cv.positive_int,
-    vol.Required(ATTR_DEVICE_NAME): cv.string,
-})
+SERVICE_SET_DEVICE_NAME_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_BUS_ID): cv.string,
+        vol.Required(ATTR_ADDRESS): cv.positive_int,
+        vol.Required(ATTR_DEVICE_NAME): cv.string,
+    }
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Velolink from a config entry."""
-    pylint: disable=too-many-locals,too-many-statements
+    # pylint: disable=too-many-locals,too-many-statements
     connection_type = entry.data.get(CONF_CONNECTION_TYPE, CONN_TYPE_SERIAL)
     buses = {}
 
@@ -176,7 +180,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Fire event to update entities
         hass.bus.async_fire(
             f"{DOMAIN}_config_updated",
-            {"bus_id": bus_id, "address": addr, "channel": ch}
+            {"bus_id": bus_id, "address": addr, "channel": ch},
         )
 
     async def handle_set_device_name(call: ServiceCall) -> None:
@@ -194,9 +198,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(
         DOMAIN, SERVICE_DISCOVERY_BUS2, handle_discovery_bus2
     )
-    hass.services.async_register(
-        DOMAIN, SERVICE_DISCOVERY_ALL, handle_discovery_all
-    )
+    hass.services.async_register(DOMAIN, SERVICE_DISCOVERY_ALL, handle_discovery_all)
     hass.services.async_register(
         DOMAIN,
         SERVICE_SET_CHANNEL_CONFIG,
@@ -234,6 +236,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, SERVICE_SET_CHANNEL_CONFIG)
         hass.services.async_remove(DOMAIN, SERVICE_SET_DEVICE_NAME)
 
-    return await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS
-    )
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
