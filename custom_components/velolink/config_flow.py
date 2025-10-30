@@ -37,10 +37,11 @@ _LOGGER = logging.getLogger(__name__)
 
 def _list_serial_ports() -> list[str]:
     """List available serial ports."""
+    # pylint: disable=import-outside-toplevel,import-error
     try:
         from serial.tools import list_ports
         return [p.device for p in list_ports.comports()]
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return ["/dev/ttyAMA0", "/dev/ttyUSB0", "/dev/ttyUSB1"]
 
 
@@ -60,19 +61,22 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle initial step."""
         if user_input is not None:
             self._connection_type = user_input[CONF_CONNECTION_TYPE]
-            
+
             if self._connection_type == CONN_TYPE_SERIAL:
                 return await self.async_step_serial()
-            elif self._connection_type == CONN_TYPE_TCP:
+
+            if self._connection_type == CONN_TYPE_TCP:
                 return await self.async_step_tcp()
 
         schema = vol.Schema({
-            vol.Required(CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL): vol.In({
+            vol.Required(
+                CONF_CONNECTION_TYPE, default=CONN_TYPE_SERIAL
+            ): vol.In({
                 CONN_TYPE_SERIAL: "Serial (RPi HAT / USB)",
                 CONN_TYPE_TCP: "TCP (VeloGateway)",
             }),
         })
-        
+
         return self.async_show_form(step_id="user", data_schema=schema)
 
     async def async_step_serial(
@@ -81,41 +85,55 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle serial connection setup."""
         errors = {}
         ports = await self.hass.async_add_executor_job(_list_serial_ports)
-        
+
         if user_input is not None:
             if user_input.get(CONF_PORT2) == "":
                 user_input.pop(CONF_PORT2, None)
-            
-            if CONF_PORT2 in user_input and user_input[CONF_PORT1] == user_input[CONF_PORT2]:
+
+            port1 = user_input.get(CONF_PORT1)
+            port2 = user_input.get(CONF_PORT2)
+
+            if port2 and port1 == port2:
                 errors["base"] = "ports_identical"
-            
+
             if not errors:
                 user_input[CONF_CONNECTION_TYPE] = CONN_TYPE_SERIAL
-                uid = f"serial-{user_input.get(CONF_PORT1,'')}-{user_input.get(CONF_PORT2,'')}"
+                uid = f"serial-{port1}-{port2 or ''}"
                 await self.async_set_unique_id(uid)
                 self._abort_if_unique_id_configured()
-                
+
                 return self.async_create_entry(
-                    title=f"Velolink Serial ({user_input[CONF_PORT1]})",
+                    title=f"Velolink Serial ({port1})",
                     data=user_input,
                 )
 
         schema = vol.Schema({
-            vol.Required(CONF_PORT1): vol.In(ports if ports else ["/dev/ttyAMA0"]),
+            vol.Required(CONF_PORT1): vol.In(
+                ports if ports else ["/dev/ttyAMA0"]
+            ),
             vol.Optional(CONF_PORT2): vol.In([""] + ports),
-            vol.Required(CONF_BAUDRATE, default=DEFAULT_BAUDRATE): cv.positive_int,
-            vol.Required(CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE): bool,
-            vol.Required(CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP): bool,
+            vol.Required(
+                CONF_BAUDRATE, default=DEFAULT_BAUDRATE
+            ): cv.positive_int,
+            vol.Required(
+                CONF_RTS_TOGGLE, default=DEFAULT_RTS_TOGGLE
+            ): bool,
+            vol.Required(
+                CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+            ): bool,
         })
-        
-        return self.async_show_form(step_id="serial", data_schema=schema, errors=errors)
+
+        return self.async_show_form(
+            step_id="serial", data_schema=schema, errors=errors
+        )
 
     async def async_step_tcp(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Handle TCP connection setup."""
+        # pylint: disable=import-outside-toplevel
         errors = {}
-        
+
         if user_input is not None:
             # Test connection
             try:
@@ -127,31 +145,39 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_GATEWAY_PORT]
                 ))
                 sock.close()
-                
+
                 if result != 0:
                     errors["base"] = "cannot_connect"
-            except Exception as e:
-                _LOGGER.exception("TCP test failed: %s", e)
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.exception("TCP test failed: %s", err)
                 errors["base"] = "cannot_connect"
-            
+
             if not errors:
                 user_input[CONF_CONNECTION_TYPE] = CONN_TYPE_TCP
-                uid = f"tcp-{user_input[CONF_GATEWAY_HOST]}-{user_input[CONF_GATEWAY_PORT]}"
+                host = user_input[CONF_GATEWAY_HOST]
+                port = user_input[CONF_GATEWAY_PORT]
+                uid = f"tcp-{host}-{port}"
                 await self.async_set_unique_id(uid)
                 self._abort_if_unique_id_configured()
-                
+
                 return self.async_create_entry(
-                    title=f"Velolink Gateway ({user_input[CONF_GATEWAY_HOST]})",
+                    title=f"Velolink Gateway ({host})",
                     data=user_input,
                 )
 
         schema = vol.Schema({
             vol.Required(CONF_GATEWAY_HOST): str,
-            vol.Required(CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT): cv.port,
-            vol.Required(CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP): bool,
+            vol.Required(
+                CONF_GATEWAY_PORT, default=DEFAULT_GATEWAY_PORT
+            ): cv.port,
+            vol.Required(
+                CONF_SCAN_ON_STARTUP, default=DEFAULT_SCAN_ON_STARTUP
+            ): bool,
         })
-        
-        return self.async_show_form(step_id="tcp", data_schema=schema, errors=errors)
+
+        return self.async_show_form(
+            step_id="tcp", data_schema=schema, errors=errors
+        )
 
     @staticmethod
     @callback
@@ -163,7 +189,9 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class VelolinkOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(
+        self, config_entry: config_entries.ConfigEntry
+    ) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
         self._bus_id: str | None = None
@@ -175,6 +203,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Handle options initial step."""
+        # pylint: disable=unused-argument
         return self.async_show_menu(
             step_id="init",
             menu_options=["edit_channel", "edit_device_name"],
@@ -184,26 +213,32 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Select channel to edit."""
+        # pylint: disable=import-outside-toplevel
         from .hub import VelolinkHub
-        
-        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
-        
+
+        hub: VelolinkHub = self.hass.data[DOMAIN][
+            self.config_entry.entry_id
+        ]
+
         channels = []
+        # pylint: disable=protected-access
         for (bus_id, addr), node in hub._nodes.items():
             if node.kind in ["input", "veloswitch", "velomotion"]:
                 for ch in range(node.channels):
                     channels.append(
-                        f"{bus_id}:{addr}:in:{ch} ({node.model or node.kind})"
+                        f"{bus_id}:{addr}:in:{ch} "
+                        f"({node.model or node.kind})"
                     )
             elif node.kind == "output":
                 for ch in range(node.channels):
                     channels.append(
-                        f"{bus_id}:{addr}:out:{ch} ({node.model or node.kind})"
+                        f"{bus_id}:{addr}:out:{ch} "
+                        f"({node.model or node.kind})"
                     )
-        
+
         if not channels:
             return self.async_abort(reason="no_channels")
-        
+
         if user_input is not None:
             selected = user_input["channel"]
             parts = selected.split(" ")[0].split(":")
@@ -216,19 +251,26 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         schema = vol.Schema({
             vol.Required("channel"): vol.In(channels),
         })
-        
-        return self.async_show_form(step_id="edit_channel", data_schema=schema)
+
+        return self.async_show_form(
+            step_id="edit_channel", data_schema=schema
+        )
 
     async def async_step_configure_channel(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Configure channel settings."""
+        # pylint: disable=import-outside-toplevel
         from .storage import VelolinkStorage
-        
+        from .const import signal_channel_config_updated
+        from homeassistant.helpers.dispatcher import (
+            async_dispatcher_send
+        )
+
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"
         ]
-        
+
         if user_input is not None:
             await storage.async_set_channel_config(
                 self._bus_id,
@@ -238,10 +280,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                 device_class=user_input.get("device_class"),
                 polarity=user_input.get("polarity"),
             )
-            
-            from .const import signal_channel_config_updated
-            from homeassistant.helpers.dispatcher import async_dispatcher_send
-            
+
             async_dispatcher_send(
                 self.hass,
                 signal_channel_config_updated(self.config_entry.entry_id),
@@ -251,13 +290,13 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                     "channel": self._channel
                 }
             )
-            
+
             return self.async_create_entry(title="", data={})
 
         current = storage.get_channel_config(
             self._bus_id, self._address, self._ch_type, self._channel
         )
-        
+
         if self._ch_type == "in":
             dc_map = DEVICE_CLASS_INPUT_MAP
         else:
@@ -273,7 +312,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                 default=current.get("polarity", POLARITY_NO)
             ): vol.In([POLARITY_NO, POLARITY_NC]),
         })
-        
+
         return self.async_show_form(
             step_id="configure_channel",
             data_schema=schema,
@@ -288,32 +327,40 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Edit device name."""
+        # pylint: disable=import-outside-toplevel
         from .hub import VelolinkHub
         from .storage import VelolinkStorage
-        
-        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+
+        hub: VelolinkHub = self.hass.data[DOMAIN][
+            self.config_entry.entry_id
+        ]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"
         ]
-        
+
+        # pylint: disable=protected-access
         devices = [
             f"{bus_id}:{addr} ({node.model or node.kind})"
             for (bus_id, addr), node in hub._nodes.items()
         ]
-        
+
         if not devices:
             return self.async_abort(reason="no_devices")
-        
+
         if user_input is not None:
             selected = user_input["device"].split(" ")[0].split(":")
             bus_id, addr = selected[0], int(selected[1])
-            
-            await storage.async_set_device_name(bus_id, addr, user_input["name"])
+
+            await storage.async_set_device_name(
+                bus_id, addr, user_input["name"]
+            )
             return self.async_create_entry(title="", data={})
 
         schema = vol.Schema({
             vol.Required("device"): vol.In(devices),
             vol.Required("name"): str,
         })
-        
-        return self.async_show_form(step_id="edit_device_name", data_schema=schema)
+
+        return self.async_show_form(
+            step_id="edit_device_name", data_schema=schema
+        )
