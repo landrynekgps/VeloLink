@@ -1,1 +1,96 @@
+discovery_bus1:
+  name: Skanuj magistralę Bus 1
+  description: Uruchamia skanowanie urządzeń na magistrali RS485 #1
 
+discovery_bus2:
+  name: Skanuj magistralę Bus 2
+  description: Uruchamia skanowanie urządzeń na magistrali RS485 #2
+
+discovery_all:
+  name: Skanuj wszystkie magistrale
+  description: Uruchamia skanowanie na wszystkich magistralach RS485
+
+set_channel_config:
+  name: Ustaw konfigurację kanału
+  description: Konfiguruje device_class i polaryzację (NO/NC) dla wejścia lub wyjścia
+  fields:
+    bus_id:
+      name: Magistrala
+      description: ID magistrali (bus1 lub bus2)
+      required: true
+      example: "bus1"
+      selector:
+        text:
+    address:
+      name: Adres
+      description: Adres urządzenia na magistrali
+      required: true
+      example: 5
+      selector:
+        number:
+          min: 1
+          max: 254
+    channel:
+      name: Kanał
+      description: Numer kanału (0-based)
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 31
+    device_class:
+      name: Device Class
+      description: Klasa urządzenia
+      required: false
+      example: "door"
+      selector:
+        select:
+          options:
+            - "none"
+            - "door"
+            - "garage_door"
+            - "window"
+            - "motion"
+            - "occupancy"
+            - "opening"
+            - "outlet"
+            - "switch"
+    polarity:
+      name: Polaryzacja
+      description: NO (normalnie otwarty) lub NC (normalnie zamknięty)
+      required: false
+      example: "NO"
+      selector:
+        select:
+          options:
+            - "NO"
+            - "NC"
+
+set_device_name:
+  name: Ustaw nazwę urządzenia
+  description: Nadaje niestandardową nazwę urządzeniu Velolink
+  fields:
+    bus_id:
+      name: Magistrala
+      description: ID magistrali
+      required: true
+      example: "bus1"
+      selector:
+        text:
+    address:
+      name: Adres
+      description: Adres urządzenia
+      required: true
+      example: 5
+      selector:
+        number:
+          min: 1
+          max: 254
+    device_name:
+      name: Nazwa
+      description: Nowa nazwa urządzenia
+      required: true
+      example: "Salon - Moduł I/O"
+      selector:
+        text:
