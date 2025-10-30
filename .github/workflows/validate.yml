@@ -45,10 +45,12 @@ jobs:
 
   black:
     runs-on: ubuntu-latest
-    name: Code formatting (Black)
+    name: Auto-format with Black
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -58,6 +60,12 @@ jobs:
       - name: Install Black
         run: pip install black
 
-      - name: Check formatting
+      - name: Format code
+        run: black custom_components/velolink/
+
+      - name: Commit changes
         run: |
-          black --check custom_components/velolink/
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-format with Black" && git push)
