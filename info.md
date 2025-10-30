@@ -1,80 +1,139 @@
-# 🔌 Velolink – Profesjonalna automatyka domowa przez RS485
+# 🔌 Velolink RS485 – Profesjonalna automatyka domowa
 
-Velolink to system automatyki domowej wykorzystujący magistralę RS485 do komunikacji z modułami wejść/wyjść, przełącznikami ściennymi, ściemniaczami i czujnikami.
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![GitHub release](https://img.shields.io/github/release/landrynekgps/VeloLink.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/releases)
+[![GitHub stars](https://img.shields.io/github/stars/landrynekgps/VeloLink.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/stargazers)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/landrynekgps/VeloLink/graphs/commit-activity)
 
-## ✨ Funkcje
+![Velolink Logo](icon.png)
 
-- ⚡ **Niskie opóźnienie** – reakcja <20ms (idealne dla przycisków)
-- 🔌 **Przewodowa komunikacja** – niezawodność RS485, bez WiFi
-- 🏠 **Auto-discovery** – automatyczne wykrywanie urządzeń
-- 🎛️ **Pełna integracja HA** – przyciski, światła, czujniki, sensory
-- 🌐 **Gateway TCP/IP** – możliwość łączenia przez Ethernet/WiFi
-- 📡 **ESP-NOW** – bezprzewodowe czujniki (opcjonalnie)
+**Velolink** to system automatyki domowej wykorzystujący **magistralę RS485** do szybkiej i niezawodnej komunikacji z modułami wejść/wyjść, przełącznikami ściennymi, ściemniaczami i czujnikami.
 
-## 🛠️ Wspierane urządzenia
+---
 
-### Moduły I/O (RS485)
-- **IO-8IN** – 8 wejść binarnych
-- **IO-8OUT** – 8 przekaźników
-- **IO-PWM** – Sterownik PWM
-- **IO-ANALOG** – Wejścia analogowe
+## ✨ Dlaczego Velolink?
 
-### Urządzenia ścienne (RS485)
-- **VeloSwitch** – Przełącznik ścienny (1-4 przyciski)
-- **VeloDimmer** – Ściemniacz z enkoderem
-- **VeloMotion** – Czujnik ruchu/obecności
-- **VeloSensor** – Czujnik temp/wilgotność/lux
+| Funkcja | Korzyść |
+|---------|---------|
+| ⚡ **Ultra-niskie opóźnienie** | Reakcja <20ms – idealne dla przycisków i czujników |
+| 🔌 **Przewodowa komunikacja** | Niezawodność RS485, brak zaników WiFi |
+| 🏢 **Duże instalacje** | Do 254 urządzeń na magistralę |
+| 🏠 **100% lokalnie** | Bez chmury, bez subskrypcji, pełna prywatność |
+| 🎛️ **Auto-discovery** | Urządzenia pojawiają się automatycznie |
+| 🌐 **Gateway WiFi/Ethernet** | Opcjonalny VeloGateway zamiast kabla do RPi |
 
-### Czujniki ESP-NOW (wymaga VeloGateway)
+---
+
+## 📸 Screenshoty
+
+<details>
+<summary>👉 Kliknij aby zobaczyć zrzuty ekranu</summary>
+
+### Główny panel
+![Dashboard](docs/images/dashboard.png)
+
+### Konfiguracja przez UI
+![Config Flow](docs/images/config-flow.png)
+
+### Wykryte urządzenia
+![Devices](docs/images/devices.png)
+
+### Edycja Device Class
+![Device Class](docs/images/device-class-config.png)
+
+</details>
+
+---
+
+## 🎛️ Wspierane urządzenia
+
+### 🔧 Moduły w rozdzielnicy (magistrala RS485)
+
+| Moduł | Typ | Kanały | Zastosowanie |
+|-------|-----|--------|--------------|
+| **IO-16IN** | Wejścia binarne | 16 | Przyciski, czujniki drzwi/okien, PIR |
+| **IO-12OUT** | Przekaźniki | 12 | Światła, rolety, bramy, ogrzewanie |
+| **IO-4OUT** | Przekaźniki | 4 | Duże moce 16A oraz pomiar prądu |
+| **IO-PWM** | PWM 0–255 | 4–8 | Ściemnianie LED, regulatory |
+| **IO-ANALOG** | Wejścia 0–10V | 4–8 | Czujniki temp/wilg, natężenie światła |
+
+### 🏠 Urządzenia ścienne (montaż podtynkowy)
+
+| Urządzenie | Opis | Platforma HA |
+|------------|------|--------------|
+| **VeloSwitch** | Przycisk ścienny (1–4 przyciski) | `binary_sensor` |
+| **VeloDimmer** | Ściemniacz z enkoderem i przyciskiem | `light` |
+| **VeloMotion** | Czujnik ruchu/obecności | `binary_sensor` |
+| **VeloSensor** | Multi-czujnik (temp/wilgotność/lux) | `sensor` |
+
+### 📡 Czujniki bezprzewodowe (ESP-NOW, wymaga VeloGateway)
+
 - Czujnik drzwi/okien
 - Czujnik temperatury
 - Przycisk bezprzewodowy
 - Przekaźnik WiFi
 
-## 📡 Typy połączeń
-
-### Serial (RPi HAT / USB-RS485)
-- Raspberry Pi + Velolink HAT
-- USB-RS485 adapter
-- Bezpośrednie podłączenie do magistrali
-
-### TCP/IP (VeloGateway)
-- ESP32/STM32 + RS485 + Ethernet/WiFi
-- Możliwość wielu klientów TCP
-- Bridge dla ESP-NOW
+---
 
 ## 🚀 Szybki start
 
-1. **Instaluj przez HACS:**
+### Wymagania
+
+- **Home Assistant** 2024.1.0 lub nowszy
+- **HACS** zainstalowany
+- Połączenie:
+  - **Opcja A:** Raspberry Pi + Velolink HAT (2× RS485)
+  - **Opcja B:** VeloGateway (ESP32/STM32 + Ethernet/WiFi)
+
+### Instalacja
+
+1. **Dodaj repozytorium do HACS:**
    - HACS → Integrations → ⋮ → Custom repositories
-   - Dodaj URL repozytorium
-   - Kategoria: Integration
-   - Download
+   - URL: `https://github.com/landrynekgps/VeloLink`
+   - Category: **Integration**
 
-2. **Restart Home Assistant**
+2. **Zainstaluj:**
+   - Szukaj "Velolink" → Download
 
-3. **Dodaj integrację:**
+3. **Restart Home Assistant**
+
+4. **Dodaj integrację:**
    - Settings → Devices & Services → Add Integration
-   - Szukaj: "Velolink"
-   - Wybierz typ połączenia (Serial lub TCP)
+   - Szukaj "Velolink"
+   - Wybierz typ połączenia (Serial / TCP)
+   - Podaj parametry (port, baudrate, itp.)
 
-4. **Discovery:**
-   - Kliknij przycisk "Skanuj magistralę"
-   - Urządzenia pojawią się automatycznie
-
-## 📚 Dokumentacja
-
-- [Instrukcja instalacji](https://github.com/yourname/velolink-ha/blob/main/docs/installation.md)
-- [Konfiguracja](https://github.com/yourname/velolink-ha/blob/main/docs/configuration.md)
-- [Rozwiązywanie problemów](https://github.com/yourname/velolink-ha/blob/main/docs/troubleshooting.md)
-- [Protokół komunikacji](https://github.com/yourname/velolink-ha/blob/main/docs/protocol.md)
-
-## 💬 Pomoc
-
-- **GitHub Issues:** https://github.com/yourname/velolink-ha/issues
-- **Discord:** https://discord.gg/velolink
-- **Forum:** https://forum.velolink.pl
+5. **Discovery:**
+   - Kliknij przycisk "Skanuj wszystkie magistrale"
+   - Urządzenia pojawią się automatycznie! 🎉
 
 ---
 
-**Velolink** – Twoja automatyka, Twoja kontrola! 🏠✨
+## 📚 Dokumentacja
+
+- 📖 [Instrukcja instalacji](docs/installation.md)
+- ⚙️ [Konfiguracja](docs/configuration.md)
+- 🔧 [Rozwiązywanie problemów](docs/troubleshooting.md)
+- 📡 [Specyfikacja protokołu](docs/protocol.md)
+- 🎓 [Przykłady automatyzacji](examples/automations.yaml)
+
+---
+
+## 🎯 Przykładowa automatyzacja
+
+```yaml
+automation:
+  - alias: "Dzwonek włącza światło w przedpokoju"
+    trigger:
+      platform: state
+      entity_id: binary_sensor.velolink_in_5_0
+      to: "on"
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.przedpokoj
+      - delay:
+          seconds: 10
+      - service: light.turn_off
+        target:
+          entity_id: light.przedpokoj
