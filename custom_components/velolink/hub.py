@@ -308,7 +308,7 @@ class TcpTransport:
             length = len(frame).to_bytes(2, "little")
 
             packet_body = magic + version + bus_byte + length + frame
-            crc = self._crc16(packet_body)
+            crc = VelolinkHub._crc16_value(packet_body) # Use static method
             packet = packet_body + crc.to_bytes(2, "little")
 
             self._writer.write(packet)
@@ -322,9 +322,117 @@ class TcpTransport:
             for _ in range(8):
                 crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
         return crc
-        # ========== Main Hub ==========
 
 
+# ========== Demo Transport ==========
+class DemoTransport:
+    """Demo transport for testing without hardware."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        bus_id: BusId,
+        cfg: VelolinkBusConfig,
+        frame_cb: Callable[[BusId, bytes], None],
+    ) -> None:
+        """Initialize demo transport."""
+        self._hass = hass
+        self._bus_id = bus_id
+        self._frame_cb = frame_cb
+        self._running = False
+        self._simulator_task: asyncio.Task | None = None
+
+    async def async_start(self) -> None:
+        """Start demo simulation."""
+        _LOGGER.info("Starting Demo %s", self._bus_id)
+        self._running = True
+        self._simulator_task = asyncio.create_task(self._simulation_loop())
+
+    async def async_stop(self) -> None:
+        """Stop demo simulation."""
+        self._running = False
+        if self._simulator_task:
+            self._simulator_task.cancel()
+            try:
+                await self._simulator_task
+            except asyncio.CancelledError:
+                pass
+
+    async def async_write_frame(self, frame: bytes) -> None:
+        """Pretend to write a frame."""
+        func = frame[3]
+        _LOGGER.debug("Demo %s: Received command to send func=0x%02X", self._bus_id, func)
+
+        if func == FunctionCode.SET_OUTPUT:
+            addr = frame[2]
+            ch = frame[6]
+            val = frame[7]
+            resp_payload = bytes([ch, val])
+            resp_frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
+        elif func == FunctionCode.SET_PWM:
+            addr = frame[2]
+            ch = frame[6]
+            val = frame[7]
+            resp_payload = bytes([ch, val])
+            resp_frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
+
+    async def _simulation_loop(self) -> None:
+        """Main simulation loop."""
+        await asyncio.sleep(2)
+        await self._simulate_discovery()
+        asyncio.create_task(self._simulate_input_changes())
+        asyncio.create_task(self._simulate_analog_changes())
+
+    async def _simulate_discovery(self):
+        """Simulate device discovery by sending HELLO frames."""
+        _LOGGER.info("Demo %s: Simulating device discovery", self._bus_id)
+        demo_devices = [
+            {"addr": 5, "kind": "input", "channels": 4, "model": "IO-INPUT-DEMO"},
+            {"addr": 10, "kind": "output", "channels": 2, "model": "IO-OUTPUT-DEMO"},
+            {"addr": 15, "kind": "pwm", "channels": 1, "model": "IO-PWM-DEMO"},
+            {"addr": 20, "kind": "analog", "channels": 1, "model": "IO-ANALOG-DEMO"},
+            {"addr": 25, "kind": "veloswitch", "channels": 1, "model": "VELOSWITCH-DEMO"},
+        ]
+        for dev in demo_devices:
+            kind_map = {"input": 0x00, "output": 0x01, "pwm": 0x02, "analog": 0x03, "veloswitch": 0x0A}
+            kind_code = kind_map.get(dev["kind"], 0xFF)
+            payload = bytes([
+                kind_code, dev["channels"], 0x00, 1, 0, 1, 0, 1,
+                len(dev["model"])
+            ]) + dev["model"].encode('ascii')
+            frame = VelolinkHub._build_frame(addr=dev["addr"], func=FunctionCode.HELLO, payload=payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
+            await asyncio.sleep(0.5)
+
+    async def _simulate_input_changes(self):
+        """Simulate binary sensor state changes."""
+        while self._running:
+            await asyncio.sleep(10)
+            payload = bytes([0, 1])
+            frame = VelolinkHub._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
+            await asyncio.sleep(5)
+            payload = bytes([0, 0])
+            frame = VelolinkHub._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
+
+    async def _simulate_analog_changes(self):
+        """Simulate analog sensor value changes."""
+        value = 1.0
+        while self._running:
+            await asyncio.sleep(5)
+            value += 0.1
+            if value > 3.3:
+                value = 1.0
+            val_mv = int(value * 1000)
+            payload = bytes([0, val_mv & 0xFF, (val_mv >> 8) & 0xFF])
+            frame = VelolinkHub._build_frame(addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload)
+            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
+
+
+# ========== Main Hub ==========
 class VelolinkHub:
     """Velolink hub managing transports and devices."""
 
@@ -337,7 +445,7 @@ class VelolinkHub:
         self._hass = hass
         self._entry_id = entry_id
         self._buses_cfg = buses
-        self._transports: Dict[BusId, SerialTransport | TcpTransport] = {}
+        self._transports: Dict[BusId, SerialTransport | TcpTransport | DemoTransport] = {}
         self._nodes: Dict[Tuple[BusId, Addr], VelolinkNode] = {}
 
         # Subscriptions
@@ -369,6 +477,8 @@ class VelolinkHub:
                 transport = SerialTransport(self._hass, bus_id, cfg, self._on_frame)
             elif cfg.transport == "tcp":
                 transport = TcpTransport(self._hass, bus_id, cfg, self._on_frame)
+            elif cfg.transport == "demo":  # <-- FIX: Dodano obsługę demo
+                transport = DemoTransport(self._hass, bus_id, cfg, self._on_frame)
             else:
                 raise ValueError(f"Unknown transport: {cfg.transport}")
 
@@ -391,7 +501,7 @@ class VelolinkHub:
     async def async_discovery_bus(self, bus_id: BusId) -> None:
         """Discover devices on bus."""
         _LOGGER.info("Discovery on %s", bus_id)
-        frame = self._build_frame(addr=0x00, func=FunctionCode.DISCOVER, payload=b"")
+        frame = VelolinkHub._build_frame(addr=0x00, func=FunctionCode.DISCOVER, payload=b"")
         await self._transports[bus_id].async_write_frame(frame)
         await asyncio.sleep(2.0)
         async_dispatcher_send(
@@ -518,7 +628,7 @@ class VelolinkHub:
     ) -> None:
         """Set output state."""
         payload = bytes([ch & 0xFF, 1 if on else 0])
-        frame = self._build_frame(
+        frame = VelolinkHub._build_frame(
             addr=addr, func=FunctionCode.SET_OUTPUT, payload=payload
         )
         await self._transports[bus_id].async_write_frame(frame)
@@ -529,7 +639,7 @@ class VelolinkHub:
         """Set PWM value."""
         value = max(0, min(255, value))
         payload = bytes([ch & 0xFF, value & 0xFF])
-        frame = self._build_frame(addr=addr, func=FunctionCode.SET_PWM, payload=payload)
+        frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.SET_PWM, payload=payload)
         await self._transports[bus_id].async_write_frame(frame)
 
     @callback
@@ -617,16 +727,18 @@ class VelolinkHub:
         """Get node by address."""
         return self._nodes.get((bus_id, addr))
 
-    def _build_frame(self, addr: int, func: int, payload: bytes) -> bytes:
+    @staticmethod
+    def _build_frame(addr: int, func: int, payload: bytes) -> bytes:
         """Build RS485 frame."""
         pre = bytes([0xAA, 0x55])
         seq = 0
         length = len(payload)
         body = bytes([addr & 0xFF, func & 0xFF, seq & 0xFF, length & 0xFF]) + payload
-        crc = self._crc16_value(body)
+        crc = VelolinkHub._crc16_value(body)
         return pre + body + crc.to_bytes(2, "little")
 
-    def _crc16_value(self, data: bytes) -> int:
+    @staticmethod
+    def _crc16_value(data: bytes) -> int:
         """Calculate CRC16."""
         crc = 0xFFFF
         for byte in data:
@@ -649,7 +761,7 @@ class VelolinkHub:
 
         body = frame[2:-2]
         crc_recv = frame[-2] | (frame[-1] << 8)
-        crc_calc = self._crc16_value(body)
+        crc_calc = VelolinkHub._crc16_value(body)
         if crc_recv != crc_calc:
             raise ValueError("CRC error")
 
@@ -772,214 +884,3 @@ class VelolinkHub:
             }
 
         raise ValueError(f"unknown func: {func:02X}")
-
-
-# ... w hub.py ...
-
-
-# ========== Demo Transport ==========
-class DemoTransport:
-    """Demo transport for testing without hardware."""
-
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        bus_id: BusId,
-        cfg: VelolinkBusConfig,
-        frame_cb: Callable[[BusId, bytes], None],
-    ) -> None:
-        """Initialize demo transport."""
-        self._hass = hass
-        self._bus_id = bus_id
-        self._frame_cb = frame_cb
-        self._running = False
-        self._simulator_task: asyncio.Task | None = None
-
-    async def async_start(self) -> None:
-        """Start demo simulation."""
-        _LOGGER.info("Starting Demo %s", self._bus_id)
-        self._running = True
-        # Uruchom symulację w tle
-        self._simulator_task = asyncio.create_task(self._simulation_loop())
-
-    async def async_stop(self) -> None:
-        """Stop demo simulation."""
-        self._running = False
-        if self._simulator_task:
-            self._simulator_task.cancel()
-            try:
-                await self._simulator_task
-            except asyncio.CancelledError:
-                pass
-
-    async def async_write_frame(self, frame: bytes) -> None:
-        """Pretend to write a frame."""
-        # W trybie demo nic nie wysyłamy, ale możemy logować
-        func = frame[3]
-        _LOGGER.debug(
-            "Demo %s: Received command to send func=0x%02X", self._bus_id, func
-        )
-
-        # Symuluj odpowiedź na ustawienie wyjścia/PWM
-        if func == FunctionCode.SET_OUTPUT:
-            addr = frame[2]
-            ch = frame[6]
-            val = frame[7]
-            # Odeślij stan wyjścia z powrotem do huba
-            resp_payload = bytes([ch, val])
-            resp_frame = self._build_frame(
-                addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload
-            )
-            self._hass.loop.call_soon_threadsafe(
-                self._frame_cb, self._bus_id, resp_frame
-            )
-        elif func == FunctionCode.SET_PWM:
-            addr = frame[2]
-            ch = frame[6]
-            val = frame[7]
-            # Odeślij stan PWM z powrotem do huba
-            resp_payload = bytes([ch, val])
-            resp_frame = self._build_frame(
-                addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload
-            )
-            self._hass.loop.call_soon_threadsafe(
-                self._frame_cb, self._bus_id, resp_frame
-            )
-
-    async def _simulation_loop(self) -> None:
-        """Main simulation loop."""
-        # Poczekaj chwilę, zanim zaczniemy symulację
-        await asyncio.sleep(2)
-
-        # Symuluj wykrycie urządzeń (Discovery)
-        await self._simulate_discovery()
-
-        # Uruchom pętle symulujące zmiany stanu
-        asyncio.create_task(self._simulate_input_changes())
-        asyncio.create_task(self._simulate_analog_changes())
-
-    async def _simulate_discovery(self):
-        """Simulate device discovery by sending HELLO frames."""
-        _LOGGER.info("Demo %s: Simulating device discovery", self._bus_id)
-
-        # Przykładowe, fałszywe urządzenia
-        demo_devices = [
-            {"addr": 5, "kind": "input", "channels": 4, "model": "IO-INPUT-DEMO"},
-            {"addr": 10, "kind": "output", "channels": 2, "model": "IO-OUTPUT-DEMO"},
-            {"addr": 15, "kind": "pwm", "channels": 1, "model": "IO-PWM-DEMO"},
-            {"addr": 20, "kind": "analog", "channels": 1, "model": "IO-ANALOG-DEMO"},
-            {
-                "addr": 25,
-                "kind": "veloswitch",
-                "channels": 1,
-                "model": "VELOSWITCH-DEMO",
-            },
-        ]
-
-        for dev in demo_devices:
-            kind_map = {
-                "input": 0x00,
-                "output": 0x01,
-                "pwm": 0x02,
-                "analog": 0x03,
-                "veloswitch": 0x0A,
-            }
-            kind_code = kind_map.get(dev["kind"], 0xFF)
-
-            payload = bytes(
-                [
-                    kind_code,  # kind
-                    dev["channels"],  # channels
-                    0x00,  # capabilities
-                    1,
-                    0,  # hw version
-                    1,
-                    0,
-                    1,  # sw version
-                    len(dev["model"]),  # model length
-                ]
-            ) + dev["model"].encode("ascii")
-
-            frame = self._build_frame(
-                addr=dev["addr"], func=FunctionCode.HELLO, payload=payload
-            )
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-            await asyncio.sleep(0.5)  # Mała przerwa między urządzeniami
-
-    async def _simulate_input_changes(self):
-        """Simulate binary sensor state changes."""
-        while self._running:
-            await asyncio.sleep(10)  # Zmień stan co 10 sekund
-            # Zmień stan wejścia 0 na urządzeniu o adresie 5
-            payload = bytes([0, 1])  # kanał 0, stan 1
-            frame = self._build_frame(
-                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
-            )
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-
-            await asyncio.sleep(5)
-            payload = bytes([0, 0])  # kanał 0, stan 0
-            frame = self._build_frame(
-                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
-            )
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-
-    async def _simulate_analog_changes(self):
-        """Simulate analog sensor value changes."""
-        value = 1.0
-        while self._running:
-            await asyncio.sleep(5)  # Zmień wartość co 5 sekund
-            value += 0.1
-            if value > 3.3:
-                value = 1.0
-
-            # Wartość analogowa jest wysyłana jako mV
-            val_mv = int(value * 1000)
-            payload = bytes(
-                [0, val_mv & 0xFF, (val_mv >> 8) & 0xFF]
-            )  # kanał 0, wartość
-            frame = self._build_frame(
-                addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload
-            )
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-
-    # Potrzebujemy dostępu do budowania ramek, przeniesiemy funkcję z klasy VelolinkHub
-    def _build_frame(self, addr: int, func: int, payload: bytes) -> bytes:
-        """Build RS485 frame."""
-        pre = bytes([0xAA, 0x55])
-        seq = 0
-        length = len(payload)
-        body = bytes([addr & 0xFF, func & 0xFF, seq & 0xFF, length & 0xFF]) + payload
-        crc = self._crc16_value(body)
-        return pre + body + crc.to_bytes(2, "little")
-
-    def _crc16_value(self, data: bytes) -> int:
-        """Calculate CRC16."""
-        crc = 0xFFFF
-        for byte in data:
-            crc ^= byte
-            for _ in range(8):
-                crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
-        return crc
-
-    # ... w klasie VelolinkHub, w metodzie async_start ...
-
-    async def async_start(self, scan_on_startup: bool = True) -> None:
-        """Start hub."""
-        for bus_id, cfg in self._buses_cfg.items():
-            if cfg.transport == "serial":
-                transport = SerialTransport(self._hass, bus_id, cfg, self._on_frame)
-            elif cfg.transport == "tcp":
-                transport = TcpTransport(self._hass, bus_id, cfg, self._on_frame)
-            elif cfg.transport == "demo":  # <-- DODAJ TEN BLOK
-                transport = DemoTransport(self._hass, bus_id, cfg, self._on_frame)
-            else:
-                raise ValueError(f"Unknown transport: {cfg.transport}")
-
-            await transport.async_start()
-            self._transports[bus_id] = transport
-
-        self._running = True
-
-        if scan_on_startup:
-            await self.async_discovery_all()
