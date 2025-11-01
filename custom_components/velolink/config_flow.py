@@ -31,7 +31,22 @@ from .const import (
     DEVICE_CLASS_OUTPUT_MAP,
     POLARITY_NO,
     POLARITY_NC,
+    # Stałe do OptionsFlow
+    NODE_KIND_INPUT,
+    NODE_KIND_OUTPUT,
+    NODE_KIND_VELOSWITCH,
+    NODE_KIND_VELOMOTION,
+    SERVICE_SET_CHANNEL_CONFIG,
+    SERVICE_SET_DEVICE_NAME,
+    ATTR_BUS_ID,
+    ATTR_ADDRESS,
+    ATTR_CHANNEL,
+    ATTR_DEVICE_CLASS,
+    ATTR_POLARITY,
+    ATTR_DEVICE_NAME,
 )
+from .hub import VelolinkHub
+from .storage import VelolinkStorage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -224,4 +239,219 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return VelolinkOptionsFlow(config_entry)
 
 
-# ... reszta pliku (VelolinkOptionsFlow) pozostaje bez zmian ...
+class VelolinkOptionsFlow(config_entries.OptionsFlow):
+    """Handle options flow for Velolink."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+        # Store intermediate data between steps
+        self._channel_to_edit: dict[str, Any] | None = None
+        self._device_to_edit: dict[str, Any] | None = None
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options={
+                "scan_devices": "🔍 Skanuj nowe urządzenia",
+                "edit_channel": "⚙️ Edytuj kanał (Device Class, NO/NC)",
+                "edit_device_name": "✏️ Zmień nazwę urządzenia",
+            },
+        )
+
+    async def async_step_scan_devices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle scanning for new devices."""
+        if user_input is not None:
+            bus_id = user_input["bus_selection"]
+            # Call the discovery service
+            await self.hass.services.async_call(
+                DOMAIN,
+                f"discovery_{bus_id}",
+                blocking=True,  # Wait for the service to finish
+            )
+            # Show a result message
+            return self.async_show_form(
+                step_id="scan_result",
+                data_schema=vol.Schema({}),
+                description_placeholders={
+                    "result": f"Skanowanie magistrali {bus_id} zakończone. Sprawdź logi, jeśli nowe urządzenia nie pojawiły się."
+                },
+            )
+
+        # Get available buses from the hub instance
+        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        buses = list(hub._buses_cfg.keys())
+        options = {bus: f"Magistrala {bus.title()}" for bus in buses}
+        return self.async_show_form(
+            step_id="scan_devices",
+            data_schema=vol.Schema({vol.Required("bus_selection"): vol.In(options)}),
+        )
+
+    async def async_step_scan_result(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the result of the scan and exit."""
+        return self.async_create_entry(title="", data={})
+
+    async def async_step_edit_channel(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle editing a channel configuration."""
+        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        storage: VelolinkStorage = self.hass.data[DOMAIN][
+            f"{self.config_entry.entry_id}_storage"
+        ]
+
+        # Build a list of all available channels
+        channels = {}
+        for (bus_id, addr), node in hub._nodes.items():
+            ch_type = None
+            if node.kind in (
+                NODE_KIND_INPUT,
+                NODE_KIND_VELOSWITCH,
+                NODE_KIND_VELOMOTION,
+            ):
+                ch_type = "in"
+            elif node.kind == NODE_KIND_OUTPUT:
+                ch_type = "out"
+
+            if ch_type:
+                for ch in range(node.channels):
+                    key = f"{bus_id}-{addr}-{ch_type}-{ch}"
+                    custom_name = storage.get_device_name(bus_id, addr)
+                    name = custom_name or f"Urządzenie {addr}"
+                    channels[key] = f"{name} ({ch_type.upper()} {ch}) na {bus_id}"
+
+        if not channels:
+            return self.async_abort(reason="no_channels")
+
+        if user_input is not None:
+            self._channel_to_edit = user_input["channel"]
+            parts = self._channel_to_edit.split("-")
+            bus_id, addr, ch_type, ch = parts[0], int(parts[1]), parts[2], int(parts[3])
+
+            device_class_options = {
+                **DEVICE_CLASS_INPUT_MAP,
+                **DEVICE_CLASS_OUTPUT_MAP,
+            }
+
+            current_config = storage.get_channel_config(bus_id, addr, ch_type, ch)
+
+            return self.async_show_form(
+                step_id="configure_channel",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(
+                            "device_class", default=current_config.get("device_class")
+                        ): vol.In(list(device_class_options.keys())),
+                        vol.Required(
+                            "polarity", default=current_config.get("polarity")
+                        ): vol.In([POLARITY_NO, POLARITY_NC]),
+                    }
+                ),
+                description_placeholders={
+                    "bus_id": bus_id,
+                    "address": addr,
+                    "channel": ch,
+                    "type": ch_type.upper(),
+                },
+            )
+
+        return self.async_show_form(
+            step_id="edit_channel",
+            data_schema=vol.Schema({vol.Required("channel"): vol.In(channels)}),
+            description_placeholders={"count": len(channels)},
+        )
+
+    async def async_step_configure_channel(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Save the new channel configuration."""
+        if user_input is not None and self._channel_to_edit:
+            parts = self._channel_to_edit.split("-")
+            bus_id, addr, ch_type, ch = parts[0], int(parts[1]), parts[2], int(parts[3])
+
+            # Call the service to update the config
+            await self.hass.services.async_call(
+                DOMAIN,
+                SERVICE_SET_CHANNEL_CONFIG,
+                {
+                    ATTR_BUS_ID: bus_id,
+                    ATTR_ADDRESS: addr,
+                    ATTR_CHANNEL: ch,
+                    ATTR_DEVICE_CLASS: user_input["device_class"],
+                    ATTR_POLARITY: user_input["polarity"],
+                },
+                blocking=True,
+            )
+            # Options flow doesn't change the main config_entry.data, so we just save an empty dict to exit.
+            return self.async_create_entry(title="", data={})
+
+        # Should not happen, but as a fallback
+        return self.async_abort(reason="unknown")
+
+    async def async_step_edit_device_name(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle editing a device name."""
+        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        storage: VelolinkStorage = self.hass.data[DOMAIN][
+            f"{self.config_entry.entry_id}_storage"
+        ]
+
+        devices = {}
+        for (bus_id, addr), node in hub._nodes.items():
+            key = f"{bus_id}-{addr}"
+            custom_name = storage.get_device_name(bus_id, addr)
+            name = custom_name or f"Velolink {node.kind.title()} {addr}"
+            devices[key] = f"{name} ({bus_id})"
+
+        if not devices:
+            return self.async_abort(reason="no_devices")
+
+        if user_input is not None:
+            self._device_to_edit = user_input["device"]
+            bus_id, addr = self._device_to_edit.split("-")
+            current_name = storage.get_device_name(bus_id, addr) or ""
+
+            return self.async_show_form(
+                step_id="set_device_name",
+                data_schema=vol.Schema({vol.Required("new_name", default=current_name): str}),
+                description_placeholders={
+                    "device": devices[self._device_to_edit],
+                    "current": current_name,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="edit_device_name",
+            data_schema=vol.Schema({vol.Required("device"): vol.In(devices)}),
+            description_placeholders={"count": len(devices)},
+        )
+
+    async def async_step_set_device_name(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Save the new device name."""
+        if user_input is not None and self._device_to_edit:
+            bus_id, addr = self._device_to_edit.split("-")
+
+            # Call the service to update the name
+            await self.hass.services.async_call(
+                DOMAIN,
+                SERVICE_SET_DEVICE_NAME,
+                {
+                    ATTR_BUS_ID: bus_id,
+                    ATTR_ADDRESS: int(addr),
+                    ATTR_DEVICE_NAME: user_input["new_name"],
+                },
+                blocking=True,
+            )
+            return self.async_create_entry(title="", data={})
+
+        return self.async_abort(reason="unknown")
