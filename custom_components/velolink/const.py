@@ -44,6 +44,11 @@ def signal_channel_config_updated(entry_id: str) -> str:
     return f"{DOMAIN}.{entry_id}.config_updated"
 
 
+def signal_device_name_updated(entry_id: str) -> str:
+    """Signal for device name updated."""
+    return f"{DOMAIN}.{entry_id}.device_name_updated"
+
+
 # Intervals
 DISCOVERY_INTERVAL_S = 30.0
 BUS_POLL_INTERVAL_S = 0.02

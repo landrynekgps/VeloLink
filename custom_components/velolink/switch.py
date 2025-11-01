@@ -20,6 +20,7 @@ from .const import (
     DEVICE_CLASS_OUTPUT_MAP,
     POLARITY_NC,
     signal_new_node,
+    signal_device_name_updated,
 )
 from .hub import VelolinkHub, VelolinkNode
 from .storage import VelolinkStorage
@@ -48,7 +49,7 @@ async def async_setup_entry(
             if uid in created:
                 continue
             created.add(uid)
-            entities.append(VelolinkOutputEntity(hub, storage, node, ch))
+            entities.append(VelolinkOutputEntity(hass, entry.entry_id, hub, storage, node, ch))
 
         if entities:
             async_add_entities(entities)
@@ -67,15 +68,18 @@ class VelolinkOutputEntity(SwitchEntity):
     _attr_should_poll = False
 
     def __init__(
-        self, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
+        self, hass: HomeAssistant, entry_id: str, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
     ) -> None:
         """Initialize entity."""
+        self._hass = hass
+        self._entry_id = entry_id
         self._hub = hub
         self._storage = storage
         self._node = node
         self._ch = ch
         self._state = False
         self._unsub: Callable[[], None] | None = None
+        self._unsub_name_update: Callable[[], None] | None = None
 
         self._load_config()
 
@@ -173,8 +177,20 @@ class VelolinkOutputEntity(SwitchEntity):
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
 
+        @callback
+        def _on_name_update(data: dict) -> None:
+            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+                self.async_write_ha_state()
+
+        self._unsub_name_update = async_dispatcher_connect(
+            self._hass, signal_device_name_updated(self._entry_id), _on_name_update
+        )
+
     async def async_will_remove_from_hass(self) -> None:
         """Handle entity removal."""
         if self._unsub:
             self._unsub()
             self._unsub = None
+        if self._unsub_name_update:
+            self._unsub_name_update()
+            self._unsub_name_update = None

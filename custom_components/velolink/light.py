@@ -21,6 +21,7 @@ from .const import (
     NODE_KIND_PWM,
     NODE_KIND_VELODIMMER,
     signal_new_node,
+    signal_device_name_updated,
 )
 from .hub import VelolinkHub, VelolinkNode
 from .storage import VelolinkStorage
@@ -47,7 +48,7 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(VelolinkLightEntity(hub, storage, node, ch))
+                entities.append(VelolinkLightEntity(hass, entry.entry_id, hub, storage, node, ch))
 
             if entities:
                 async_add_entities(entities)
@@ -59,7 +60,7 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(VeloDimmerEntity(hub, storage, node, ch))
+                entities.append(VeloDimmerEntity(hass, entry.entry_id, hub, storage, node, ch))
 
             if entities:
                 async_add_entities(entities)
@@ -77,12 +78,16 @@ class VelolinkLightEntity(LightEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
+        entry_id: str,
         hub: VelolinkHub,
         storage: VelolinkStorage,
         node: VelolinkNode,
         ch: int,
     ) -> None:
         """Initialize entity."""
+        self._hass = hass
+        self._entry_id = entry_id
         self._hub = hub
         self._storage = storage
         self._node = node
@@ -90,6 +95,7 @@ class VelolinkLightEntity(LightEntity):
         self._is_on = False
         self._brightness = 255
         self._unsub: Callable[[], None] | None = None
+        self._unsub_name_update: Callable[[], None] | None = None
 
     @property
     def unique_id(self) -> str:
@@ -179,11 +185,23 @@ class VelolinkLightEntity(LightEntity):
             self._node.bus_id, self._node.address, self._ch, _on_change
         )
 
+        @callback
+        def _on_name_update(data: dict) -> None:
+            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+                self.async_write_ha_state()
+
+        self._unsub_name_update = async_dispatcher_connect(
+            self._hass, signal_device_name_updated(self._entry_id), _on_name_update
+        )
+
     async def async_will_remove_from_hass(self) -> None:
         """Handle entity removal."""
         if self._unsub:
             self._unsub()
             self._unsub = None
+        if self._unsub_name_update:
+            self._unsub_name_update()
+            self._unsub_name_update = None
 
 
 class VeloDimmerEntity(LightEntity):
@@ -193,12 +211,16 @@ class VeloDimmerEntity(LightEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
+        entry_id: str,
         hub: VelolinkHub,
         storage: VelolinkStorage,
         node: VelolinkNode,
         ch: int,
     ) -> None:
         """Initialize entity."""
+        self._hass = hass
+        self._entry_id = entry_id
         self._hub = hub
         self._storage = storage
         self._node = node
@@ -211,6 +233,7 @@ class VeloDimmerEntity(LightEntity):
         self._unsub_button: Callable[[], None] | None = None
         self._unsub_encoder: Callable[[], None] | None = None
         self._unsub_pwm: Callable[[], None] | None = None
+        self._unsub_name_update: Callable[[], None] | None = None
 
     @property
     def unique_id(self) -> str:
@@ -345,6 +368,15 @@ class VeloDimmerEntity(LightEntity):
             self._node.bus_id, self._node.address, self._ch, _on_encoder
         )
 
+        @callback
+        def _on_name_update(data: dict) -> None:
+            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+                self.async_write_ha_state()
+
+        self._unsub_name_update = async_dispatcher_connect(
+            self._hass, signal_device_name_updated(self._entry_id), _on_name_update
+        )
+
     async def async_will_remove_from_hass(self) -> None:
         """Handle entity removal."""
         if self._unsub_pwm:
@@ -353,3 +385,6 @@ class VeloDimmerEntity(LightEntity):
             self._unsub_button()
         if self._unsub_encoder:
             self._unsub_encoder()
+        if self._unsub_name_update:
+            self._unsub_name_update()
+            self._unsub_name_update = None
