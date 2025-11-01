@@ -238,7 +238,9 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="tcp", data_schema=schema)
 
-    async def async_step_demo(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
+    async def async_step_demo(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> FlowResult:
         """Handle demo mode setup."""
         user_input = user_input or {}
         user_input[CONF_CONNECTION_TYPE] = CONN_TYPE_DEMO
@@ -451,7 +453,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
             return self.async_show_form(
                 step_id="set_device_name",
-                data_schema=vol.Schema({vol.Required("new_name", default=current_name): str}),
+                data_schema=vol.Schema(
+                    {vol.Required("new_name", default=current_name): str}
+                ),
                 description_placeholders={
                     "device": devices[self._device_to_edit],
                     "current": current_name,
