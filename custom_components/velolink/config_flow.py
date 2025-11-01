@@ -421,7 +421,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
             return self.async_show_form(
                 step_id="set_device_name",
-                data_schema=vol.Schema({vol.Required("new_name", default=current_name): str}),
+                data_schema=vol.Schema(
+                    {vol.Required("new_name", default=current_name): str}
+                ),
                 description_placeholders={
                     "device": devices[self._device_to_edit],
                     "current": current_name,
