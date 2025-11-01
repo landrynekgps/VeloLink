@@ -22,7 +22,7 @@ from .const import (
     DEVICE_CLASS_INPUT_MAP,
     POLARITY_NC,
     signal_new_node,
-    signal_device_name_updated, # <-- NOWY IMPORT
+    signal_device_name_updated,  # <-- NOWY IMPORT
 )
 from .hub import VelolinkHub, VelolinkNode
 from .storage import VelolinkStorage
@@ -52,7 +52,9 @@ async def async_setup_entry(
             if uid in created:
                 continue
             created.add(uid)
-            entities.append(VelolinkInputEntity(hass, entry.entry_id, hub, storage, node, ch)) # <-- FIX: Przekazanie entry_id
+            entities.append(
+                VelolinkInputEntity(hass, entry.entry_id, hub, storage, node, ch)
+            )  # <-- FIX: Przekazanie entry_id
 
         if entities:
             async_add_entities(entities)
@@ -69,18 +71,26 @@ class VelolinkInputEntity(BinarySensorEntity):
     _attr_should_poll = False
 
     def __init__(
-        self, hass: HomeAssistant, entry_id: str, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        hub: VelolinkHub,
+        storage: VelolinkStorage,
+        node: VelolinkNode,
+        ch: int,
     ) -> None:
         """Initialize entity."""
         self._hass = hass
-        self._entry_id = entry_id # <-- FIX: Przechowaj entry_id
+        self._entry_id = entry_id  # <-- FIX: Przechowaj entry_id
         self._hub = hub
         self._storage = storage
         self._node = node
         self._ch = ch
         self._state = False
         self._unsub: Callable[[], None] | None = None
-        self._unsub_name_update: Callable[[], None] | None = None # <-- FIX: Nowy subskrybent
+        self._unsub_name_update: Callable[[], None] | None = (
+            None  # <-- FIX: Nowy subskrybent
+        )
 
         self._load_config()
 
@@ -174,19 +184,21 @@ class VelolinkInputEntity(BinarySensorEntity):
         # <-- FIX: Dodaj subskrypcję na zmianę nazwy -->
         @callback
         def _on_name_update(data: dict) -> None:
-            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+            if (
+                data["bus_id"] == self._node.bus_id
+                and data["address"] == self._node.address
+            ):
                 self.async_write_ha_state()
 
         self._unsub_name_update = async_dispatcher_connect(
             self._hass, signal_device_name_updated(self._entry_id), _on_name_update
         )
 
-
     async def async_will_remove_from_hass(self) -> None:
         """Handle entity removal."""
         if self._unsub:
             self._unsub()
             self._unsub = None
-        if self._unsub_name_update: # <-- FIX: Odsubskrybuj
+        if self._unsub_name_update:  # <-- FIX: Odsubskrybuj
             self._unsub_name_update()
             self._unsub_name_update = None

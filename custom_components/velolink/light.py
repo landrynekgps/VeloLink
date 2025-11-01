@@ -48,7 +48,9 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(VelolinkLightEntity(hass, entry.entry_id, hub, storage, node, ch))
+                entities.append(
+                    VelolinkLightEntity(hass, entry.entry_id, hub, storage, node, ch)
+                )
 
             if entities:
                 async_add_entities(entities)
@@ -60,7 +62,9 @@ async def async_setup_entry(
                 if uid in created:
                     continue
                 created.add(uid)
-                entities.append(VeloDimmerEntity(hass, entry.entry_id, hub, storage, node, ch))
+                entities.append(
+                    VeloDimmerEntity(hass, entry.entry_id, hub, storage, node, ch)
+                )
 
             if entities:
                 async_add_entities(entities)
@@ -187,7 +191,10 @@ class VelolinkLightEntity(LightEntity):
 
         @callback
         def _on_name_update(data: dict) -> None:
-            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+            if (
+                data["bus_id"] == self._node.bus_id
+                and data["address"] == self._node.address
+            ):
                 self.async_write_ha_state()
 
         self._unsub_name_update = async_dispatcher_connect(
@@ -370,7 +377,10 @@ class VeloDimmerEntity(LightEntity):
 
         @callback
         def _on_name_update(data: dict) -> None:
-            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+            if (
+                data["bus_id"] == self._node.bus_id
+                and data["address"] == self._node.address
+            ):
                 self.async_write_ha_state()
 
         self._unsub_name_update = async_dispatcher_connect(

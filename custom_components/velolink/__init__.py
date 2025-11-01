@@ -41,7 +41,7 @@ from .const import (
     POLARITY_NO,
     POLARITY_NC,
     DEFAULT_BAUDRATE,
-    signal_device_name_updated, # <-- NOWY IMPORT
+    signal_device_name_updated,  # <-- NOWY IMPORT
 )
 from .hub import VelolinkHub, VelolinkBusConfig
 from .storage import VelolinkStorage
@@ -204,13 +204,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             # <-- FIX: Wyślij sygnał o aktualizacji nazwy -->
             async_dispatcher_send(
-                hass, signal_device_name_updated(entry.entry_id), {"bus_id": bus_id, "address": addr}
+                hass,
+                signal_device_name_updated(entry.entry_id),
+                {"bus_id": bus_id, "address": addr},
             )
 
         # Register all services
-        hass.services.async_register(DOMAIN, SERVICE_DISCOVERY_BUS1, handle_discovery_bus1)
-        hass.services.async_register(DOMAIN, SERVICE_DISCOVERY_BUS2, handle_discovery_bus2)
-        hass.services.async_register(DOMAIN, SERVICE_DISCOVERY_ALL, handle_discovery_all)
+        hass.services.async_register(
+            DOMAIN, SERVICE_DISCOVERY_BUS1, handle_discovery_bus1
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_DISCOVERY_BUS2, handle_discovery_bus2
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_DISCOVERY_ALL, handle_discovery_all
+        )
         hass.services.async_register(
             DOMAIN,
             SERVICE_SET_CHANNEL_CONFIG,

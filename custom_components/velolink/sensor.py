@@ -49,7 +49,9 @@ async def async_setup_entry(
             if uid in created:
                 continue
             created.add(uid)
-            entities.append(VelolinkAnalogEntity(hass, entry.entry_id, hub, storage, node, ch))
+            entities.append(
+                VelolinkAnalogEntity(hass, entry.entry_id, hub, storage, node, ch)
+            )
 
         if entities:
             async_add_entities(entities)
@@ -66,7 +68,13 @@ class VelolinkAnalogEntity(SensorEntity):
     _attr_should_poll = False
 
     def __init__(
-        self, hass: HomeAssistant, entry_id: str, hub: VelolinkHub, storage: VelolinkStorage, node: VelolinkNode, ch: int
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        hub: VelolinkHub,
+        storage: VelolinkStorage,
+        node: VelolinkNode,
+        ch: int,
     ) -> None:
         """Initialize entity."""
         self._hass = hass
@@ -154,7 +162,10 @@ class VelolinkAnalogEntity(SensorEntity):
 
         @callback
         def _on_name_update(data: dict) -> None:
-            if data["bus_id"] == self._node.bus_id and data["address"] == self._node.address:
+            if (
+                data["bus_id"] == self._node.bus_id
+                and data["address"] == self._node.address
+            ):
                 self.async_write_ha_state()
 
         self._unsub_name_update = async_dispatcher_connect(
