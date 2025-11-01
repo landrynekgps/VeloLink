@@ -236,22 +236,15 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): bool,
             }
         )
-        # --- POPRAWKA 1: Brakowało tej linii ---
         return self.async_show_form(step_id="tcp", data_schema=schema)
 
-    async def async_step_demo(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
+    async def async_step_demo(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
         """Handle demo mode setup."""
-        # W trybie demo nie potrzebujemy żadnych danych od użytkownika
         user_input = user_input or {}
-
         user_input[CONF_CONNECTION_TYPE] = CONN_TYPE_DEMO
         uid = "demo-mode"
         await self.async_set_unique_id(uid)
         self._abort_if_unique_id_configured()
-
-        # --- POPRAWKA 2: Usunięto zbędną, nieosiągalną linię ---
         return self.async_create_entry(title="Velolink (Tryb Demo)", data=user_input)
 
     @staticmethod
@@ -261,13 +254,13 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return VelolinkOptionsFlow(config_entry)
 
 
-# ... reszta pliku (VelolinkOptionsFlow) pozostaje bez zmian ...
 class VelolinkOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Velolink."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        # <-- FIX 2: Zmiana na atrybut prywatny -->
+        self._config_entry = config_entry
         # Store intermediate data between steps
         self._channel_to_edit: dict[str, Any] | None = None
         self._device_to_edit: dict[str, Any] | None = None
@@ -289,9 +282,10 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle scanning for new devices."""
+        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
-            return
-    self.async_abort(reason="integration_not_setup")
+            return self.async_abort(reason="integration_not_setup")
+
         if user_input is not None:
             bus_id = user_input["bus_selection"]
             # Call the discovery service
@@ -309,8 +303,8 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                 },
             )
 
-        # Get available buses from the hub instance
-        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        # <-- FIX 2: Użycie _config_entry -->
+        hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         buses = list(hub._buses_cfg.keys())
         options = {bus: f"Magistrala {bus.title()}" for bus in buses}
         return self.async_show_form(
@@ -328,11 +322,14 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a channel configuration."""
+        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
             return self.async_abort(reason="integration_not_setup")
-        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+
+        # <-- FIX 2: Użycie _config_entry -->
+        hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
-            f"{self.config_entry.entry_id}_storage"
+            f"{self._config_entry.entry_id}_storage"
         ]
 
         # Build a list of all available channels
@@ -427,12 +424,14 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a device name."""
+        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
-            return
-    self.async_abort(reason="integration_not_setup")        
-        hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
+            return self.async_abort(reason="integration_not_setup")
+
+        # <-- FIX 2: Użycie _config_entry -->
+        hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
-            f"{self.config_entry.entry_id}_storage"
+            f"{self._config_entry.entry_id}_storage"
         ]
 
         devices = {}
@@ -452,9 +451,7 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
             return self.async_show_form(
                 step_id="set_device_name",
-                data_schema=vol.Schema(
-                    {vol.Required("new_name", default=current_name): str}
-                ),
+                data_schema=vol.Schema({vol.Required("new_name", default=current_name): str}),
                 description_placeholders={
                     "device": devices[self._device_to_edit],
                     "current": current_name,
