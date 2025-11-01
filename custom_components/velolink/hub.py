@@ -308,7 +308,7 @@ class TcpTransport:
             length = len(frame).to_bytes(2, "little")
 
             packet_body = magic + version + bus_byte + length + frame
-            crc = VelolinkHub._crc16_value(packet_body) # Use static method
+            crc = VelolinkHub._crc16_value(packet_body)  # Use static method
             packet = packet_body + crc.to_bytes(2, "little")
 
             self._writer.write(packet)
@@ -361,22 +361,32 @@ class DemoTransport:
     async def async_write_frame(self, frame: bytes) -> None:
         """Pretend to write a frame."""
         func = frame[3]
-        _LOGGER.debug("Demo %s: Received command to send func=0x%02X", self._bus_id, func)
+        _LOGGER.debug(
+            "Demo %s: Received command to send func=0x%02X", self._bus_id, func
+        )
 
         if func == FunctionCode.SET_OUTPUT:
             addr = frame[2]
             ch = frame[6]
             val = frame[7]
             resp_payload = bytes([ch, val])
-            resp_frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload)
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
+            resp_frame = VelolinkHub._build_frame(
+                addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload
+            )
+            self._hass.loop.call_soon_threadsafe(
+                self._frame_cb, self._bus_id, resp_frame
+            )
         elif func == FunctionCode.SET_PWM:
             addr = frame[2]
             ch = frame[6]
             val = frame[7]
             resp_payload = bytes([ch, val])
-            resp_frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload)
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
+            resp_frame = VelolinkHub._build_frame(
+                addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload
+            )
+            self._hass.loop.call_soon_threadsafe(
+                self._frame_cb, self._bus_id, resp_frame
+            )
 
     async def _simulation_loop(self) -> None:
         """Main simulation loop."""
@@ -393,16 +403,28 @@ class DemoTransport:
             {"addr": 10, "kind": "output", "channels": 2, "model": "IO-OUTPUT-DEMO"},
             {"addr": 15, "kind": "pwm", "channels": 1, "model": "IO-PWM-DEMO"},
             {"addr": 20, "kind": "analog", "channels": 1, "model": "IO-ANALOG-DEMO"},
-            {"addr": 25, "kind": "veloswitch", "channels": 1, "model": "VELOSWITCH-DEMO"},
+            {
+                "addr": 25,
+                "kind": "veloswitch",
+                "channels": 1,
+                "model": "VELOSWITCH-DEMO",
+            },
         ]
         for dev in demo_devices:
-            kind_map = {"input": 0x00, "output": 0x01, "pwm": 0x02, "analog": 0x03, "veloswitch": 0x0A}
+            kind_map = {
+                "input": 0x00,
+                "output": 0x01,
+                "pwm": 0x02,
+                "analog": 0x03,
+                "veloswitch": 0x0A,
+            }
             kind_code = kind_map.get(dev["kind"], 0xFF)
-            payload = bytes([
-                kind_code, dev["channels"], 0x00, 1, 0, 1, 0, 1,
-                len(dev["model"])
-            ]) + dev["model"].encode('ascii')
-            frame = VelolinkHub._build_frame(addr=dev["addr"], func=FunctionCode.HELLO, payload=payload)
+            payload = bytes(
+                [kind_code, dev["channels"], 0x00, 1, 0, 1, 0, 1, len(dev["model"])]
+            ) + dev["model"].encode("ascii")
+            frame = VelolinkHub._build_frame(
+                addr=dev["addr"], func=FunctionCode.HELLO, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
             await asyncio.sleep(0.5)
 
@@ -411,11 +433,15 @@ class DemoTransport:
         while self._running:
             await asyncio.sleep(10)
             payload = bytes([0, 1])
-            frame = VelolinkHub._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            frame = VelolinkHub._build_frame(
+                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
             await asyncio.sleep(5)
             payload = bytes([0, 0])
-            frame = VelolinkHub._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            frame = VelolinkHub._build_frame(
+                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
 
     async def _simulate_analog_changes(self):
@@ -428,7 +454,9 @@ class DemoTransport:
                 value = 1.0
             val_mv = int(value * 1000)
             payload = bytes([0, val_mv & 0xFF, (val_mv >> 8) & 0xFF])
-            frame = VelolinkHub._build_frame(addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload)
+            frame = VelolinkHub._build_frame(
+                addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
 
 
@@ -445,7 +473,9 @@ class VelolinkHub:
         self._hass = hass
         self._entry_id = entry_id
         self._buses_cfg = buses
-        self._transports: Dict[BusId, SerialTransport | TcpTransport | DemoTransport] = {}
+        self._transports: Dict[
+            BusId, SerialTransport | TcpTransport | DemoTransport
+        ] = {}
         self._nodes: Dict[Tuple[BusId, Addr], VelolinkNode] = {}
 
         # Subscriptions
@@ -501,7 +531,9 @@ class VelolinkHub:
     async def async_discovery_bus(self, bus_id: BusId) -> None:
         """Discover devices on bus."""
         _LOGGER.info("Discovery on %s", bus_id)
-        frame = VelolinkHub._build_frame(addr=0x00, func=FunctionCode.DISCOVER, payload=b"")
+        frame = VelolinkHub._build_frame(
+            addr=0x00, func=FunctionCode.DISCOVER, payload=b""
+        )
         await self._transports[bus_id].async_write_frame(frame)
         await asyncio.sleep(2.0)
         async_dispatcher_send(
@@ -639,7 +671,9 @@ class VelolinkHub:
         """Set PWM value."""
         value = max(0, min(255, value))
         payload = bytes([ch & 0xFF, value & 0xFF])
-        frame = VelolinkHub._build_frame(addr=addr, func=FunctionCode.SET_PWM, payload=payload)
+        frame = VelolinkHub._build_frame(
+            addr=addr, func=FunctionCode.SET_PWM, payload=payload
+        )
         await self._transports[bus_id].async_write_frame(frame)
 
     @callback
