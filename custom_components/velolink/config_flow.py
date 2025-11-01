@@ -239,7 +239,9 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # --- POPRAWKA 1: Brakowało tej linii ---
         return self.async_show_form(step_id="tcp", data_schema=schema)
 
-    async def async_step_demo(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
+    async def async_step_demo(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> FlowResult:
         """Handle demo mode setup."""
         # W trybie demo nie potrzebujemy żadnych danych od użytkownika
         user_input = user_input or {}

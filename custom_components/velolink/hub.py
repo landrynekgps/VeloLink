@@ -772,7 +772,10 @@ class VelolinkHub:
             }
 
         raise ValueError(f"unknown func: {func:02X}")
+
+
 # ... w hub.py ...
+
 
 # ========== Demo Transport ==========
 class DemoTransport:
@@ -813,7 +816,9 @@ class DemoTransport:
         """Pretend to write a frame."""
         # W trybie demo nic nie wysyłamy, ale możemy logować
         func = frame[3]
-        _LOGGER.debug("Demo %s: Received command to send func=0x%02X", self._bus_id, func)
+        _LOGGER.debug(
+            "Demo %s: Received command to send func=0x%02X", self._bus_id, func
+        )
 
         # Symuluj odpowiedź na ustawienie wyjścia/PWM
         if func == FunctionCode.SET_OUTPUT:
@@ -822,17 +827,24 @@ class DemoTransport:
             val = frame[7]
             # Odeślij stan wyjścia z powrotem do huba
             resp_payload = bytes([ch, val])
-            resp_frame = self._build_frame(addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload)
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
+            resp_frame = self._build_frame(
+                addr=addr, func=FunctionCode.OUTPUT_STATE, payload=resp_payload
+            )
+            self._hass.loop.call_soon_threadsafe(
+                self._frame_cb, self._bus_id, resp_frame
+            )
         elif func == FunctionCode.SET_PWM:
             addr = frame[2]
             ch = frame[6]
             val = frame[7]
             # Odeślij stan PWM z powrotem do huba
             resp_payload = bytes([ch, val])
-            resp_frame = self._build_frame(addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload)
-            self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, resp_frame)
-
+            resp_frame = self._build_frame(
+                addr=addr, func=FunctionCode.PWM_STATE, payload=resp_payload
+            )
+            self._hass.loop.call_soon_threadsafe(
+                self._frame_cb, self._bus_id, resp_frame
+            )
 
     async def _simulation_loop(self) -> None:
         """Main simulation loop."""
@@ -849,60 +861,86 @@ class DemoTransport:
     async def _simulate_discovery(self):
         """Simulate device discovery by sending HELLO frames."""
         _LOGGER.info("Demo %s: Simulating device discovery", self._bus_id)
-        
+
         # Przykładowe, fałszywe urządzenia
         demo_devices = [
             {"addr": 5, "kind": "input", "channels": 4, "model": "IO-INPUT-DEMO"},
             {"addr": 10, "kind": "output", "channels": 2, "model": "IO-OUTPUT-DEMO"},
             {"addr": 15, "kind": "pwm", "channels": 1, "model": "IO-PWM-DEMO"},
             {"addr": 20, "kind": "analog", "channels": 1, "model": "IO-ANALOG-DEMO"},
-            {"addr": 25, "kind": "veloswitch", "channels": 1, "model": "VELOSWITCH-DEMO"},
+            {
+                "addr": 25,
+                "kind": "veloswitch",
+                "channels": 1,
+                "model": "VELOSWITCH-DEMO",
+            },
         ]
 
         for dev in demo_devices:
-            kind_map = {"input": 0x00, "output": 0x01, "pwm": 0x02, "analog": 0x03, "veloswitch": 0x0A}
+            kind_map = {
+                "input": 0x00,
+                "output": 0x01,
+                "pwm": 0x02,
+                "analog": 0x03,
+                "veloswitch": 0x0A,
+            }
             kind_code = kind_map.get(dev["kind"], 0xFF)
-            
-            payload = bytes([
-                kind_code,       # kind
-                dev["channels"], # channels
-                0x00,            # capabilities
-                1, 0,            # hw version
-                1, 0, 1,         # sw version
-                len(dev["model"]) # model length
-            ]) + dev["model"].encode('ascii')
 
-            frame = self._build_frame(addr=dev["addr"], func=FunctionCode.HELLO, payload=payload)
+            payload = bytes(
+                [
+                    kind_code,  # kind
+                    dev["channels"],  # channels
+                    0x00,  # capabilities
+                    1,
+                    0,  # hw version
+                    1,
+                    0,
+                    1,  # sw version
+                    len(dev["model"]),  # model length
+                ]
+            ) + dev["model"].encode("ascii")
+
+            frame = self._build_frame(
+                addr=dev["addr"], func=FunctionCode.HELLO, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-            await asyncio.sleep(0.5) # Mała przerwa między urządzeniami
+            await asyncio.sleep(0.5)  # Mała przerwa między urządzeniami
 
     async def _simulate_input_changes(self):
         """Simulate binary sensor state changes."""
         while self._running:
-            await asyncio.sleep(10) # Zmień stan co 10 sekund
+            await asyncio.sleep(10)  # Zmień stan co 10 sekund
             # Zmień stan wejścia 0 na urządzeniu o adresie 5
-            payload = bytes([0, 1]) # kanał 0, stan 1
-            frame = self._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            payload = bytes([0, 1])  # kanał 0, stan 1
+            frame = self._build_frame(
+                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
-            
+
             await asyncio.sleep(5)
-            payload = bytes([0, 0]) # kanał 0, stan 0
-            frame = self._build_frame(addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload)
+            payload = bytes([0, 0])  # kanał 0, stan 0
+            frame = self._build_frame(
+                addr=5, func=FunctionCode.INPUT_CHANGE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
 
     async def _simulate_analog_changes(self):
         """Simulate analog sensor value changes."""
         value = 1.0
         while self._running:
-            await asyncio.sleep(5) # Zmień wartość co 5 sekund
+            await asyncio.sleep(5)  # Zmień wartość co 5 sekund
             value += 0.1
             if value > 3.3:
                 value = 1.0
-            
+
             # Wartość analogowa jest wysyłana jako mV
             val_mv = int(value * 1000)
-            payload = bytes([0, val_mv & 0xFF, (val_mv >> 8) & 0xFF]) # kanał 0, wartość
-            frame = self._build_frame(addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload)
+            payload = bytes(
+                [0, val_mv & 0xFF, (val_mv >> 8) & 0xFF]
+            )  # kanał 0, wartość
+            frame = self._build_frame(
+                addr=20, func=FunctionCode.ANALOG_SAMPLE, payload=payload
+            )
             self._hass.loop.call_soon_threadsafe(self._frame_cb, self._bus_id, frame)
 
     # Potrzebujemy dostępu do budowania ramek, przeniesiemy funkcję z klasy VelolinkHub
@@ -924,7 +962,7 @@ class DemoTransport:
                 crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
         return crc
 
-# ... w klasie VelolinkHub, w metodzie async_start ...
+    # ... w klasie VelolinkHub, w metodzie async_start ...
 
     async def async_start(self, scan_on_startup: bool = True) -> None:
         """Start hub."""
