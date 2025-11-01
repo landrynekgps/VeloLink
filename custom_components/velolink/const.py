@@ -20,6 +20,7 @@ CONF_CONNECTION_TYPE = "connection_type"
 # Connection types
 CONN_TYPE_SERIAL = "serial"
 CONN_TYPE_TCP = "tcp"
+CONN_TYPE_DEMO = "demo"
 
 DEFAULT_BAUDRATE = 115200
 DEFAULT_RTS_TOGGLE = False

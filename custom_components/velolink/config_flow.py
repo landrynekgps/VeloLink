@@ -44,6 +44,7 @@ from .const import (
     ATTR_DEVICE_CLASS,
     ATTR_POLARITY,
     ATTR_DEVICE_NAME,
+    CONN_TYPE_DEMO,
 )
 from .hub import VelolinkHub
 from .storage import VelolinkStorage
@@ -54,6 +55,7 @@ _LOGGER = logging.getLogger(__name__)
 CONN_CHOICE_RPI_HAT = "rpi_hat"
 CONN_CHOICE_USB = "usb"
 CONN_CHOICE_TCP = "tcp"
+CONN_CHOICE_DEMO = "demo"
 
 
 def _list_serial_ports() -> dict[str, str]:
@@ -100,18 +102,23 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_serial_usb()
             if self._connection_type == CONN_CHOICE_TCP:
                 return await self.async_step_tcp()
+            if self._connection_type == CONN_CHOICE_DEMO:
+                return await self.async_step_demo()
+
+        # Opcja demo jest zawsze dostępna
+        options = {CONN_CHOICE_DEMO: "Tryb Demo (testowanie bez sprzętu)"}
 
         # Sprawdź, czy są porty charakterystyczne dla RPi HAT
         all_ports = await self.hass.async_add_executor_job(_list_serial_ports)
         has_rpi_hat_port = any("ttyAMA" in p or "serial" in p for p in all_ports)
 
-        options = {CONN_CHOICE_TCP: "TCP (VeloGateway)"}
         if has_rpi_hat_port:
             options[CONN_CHOICE_RPI_HAT] = "Raspberry Pi HAT"
 
-        # Zawsze pokazuj opcję USB, jeśli są jakiekolwiek porty
         if all_ports:
             options[CONN_CHOICE_USB] = "Adapter USB-RS485"
+
+        options[CONN_CHOICE_TCP] = "TCP (VeloGateway)"
 
         schema = vol.Schema({vol.Required("connection_choice"): vol.In(options)})
 
@@ -129,7 +136,7 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if port2 and port1 == port2:
             return self.async_show_form(
-                step_id="serial_usb",  # lub serial_hat
+                step_id="serial_usb",
                 data_schema=self.data_schema,
                 errors={"base": "ports_identical"},
             )
@@ -229,8 +236,21 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): bool,
             }
         )
-
+        # --- POPRAWKA 1: Brakowało tej linii ---
         return self.async_show_form(step_id="tcp", data_schema=schema)
+
+    async def async_step_demo(self, user_input: Optional[Dict[str, Any]] = None) -> FlowResult:
+        """Handle demo mode setup."""
+        # W trybie demo nie potrzebujemy żadnych danych od użytkownika
+        user_input = user_input or {}
+
+        user_input[CONF_CONNECTION_TYPE] = CONN_TYPE_DEMO
+        uid = "demo-mode"
+        await self.async_set_unique_id(uid)
+        self._abort_if_unique_id_configured()
+
+        # --- POPRAWKA 2: Usunięto zbędną, nieosiągalną linię ---
+        return self.async_create_entry(title="Velolink (Tryb Demo)", data=user_input)
 
     @staticmethod
     @callback
@@ -239,6 +259,7 @@ class VelolinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return VelolinkOptionsFlow(config_entry)
 
 
+# ... reszta pliku (VelolinkOptionsFlow) pozostaje bez zmian ...
 class VelolinkOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Velolink."""
 
