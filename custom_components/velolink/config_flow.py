@@ -289,6 +289,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle scanning for new devices."""
+        if DOMAIN not in self.hass.data:
+            return
+    self.async_abort(reason="integration_not_setup")
         if user_input is not None:
             bus_id = user_input["bus_selection"]
             # Call the discovery service
@@ -325,6 +328,8 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a channel configuration."""
+        if DOMAIN not in self.hass.data:
+            return self.async_abort(reason="integration_not_setup")
         hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"
@@ -422,6 +427,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a device name."""
+        if DOMAIN not in self.hass.data:
+            return
+    self.async_abort(reason="integration_not_setup")        
         hub: VelolinkHub = self.hass.data[DOMAIN][self.config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self.config_entry.entry_id}_storage"

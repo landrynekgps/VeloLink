@@ -123,7 +123,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             name="VeloGateway Bus2",
             transport="tcp",
         )
-
+    elif connection_type == CONN_TYPE_DEMO:
+        # Demo connection
+        buses["bus1"] = VelolinkBusConfig(
+            name="Demo Bus 1",
+            transport="demo",
+        )
+        buses["bus2"] = VelolinkBusConfig(
+            name="Demo Bus 2",
+            transport="demo",
+        )
     if not buses:
         _LOGGER.error("No buses configured for Velolink")
         return False
