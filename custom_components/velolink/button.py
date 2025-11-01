@@ -36,8 +36,6 @@ async def async_setup_entry(
 class VelolinkDiscoveryButton(ButtonEntity):
     """Button to trigger discovery."""
 
-    # pylint: disable=abstract-method
-
     _attr_should_poll = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 

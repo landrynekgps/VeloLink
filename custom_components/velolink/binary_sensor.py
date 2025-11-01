@@ -65,8 +65,6 @@ async def async_setup_entry(
 class VelolinkInputEntity(BinarySensorEntity):
     """Binary sensor for Velolink input."""
 
-    # pylint: disable=too-many-instance-attributes
-
     _attr_should_poll = False
 
     def __init__(
