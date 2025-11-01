@@ -261,7 +261,6 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        # <-- FIX 2: Zmiana na atrybut prywatny -->
         self._config_entry = config_entry
         # Store intermediate data between steps
         self._channel_to_edit: dict[str, Any] | None = None
@@ -284,7 +283,6 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle scanning for new devices."""
-        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
             return self.async_abort(reason="integration_not_setup")
 
@@ -305,7 +303,6 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
                 },
             )
 
-        # <-- FIX 2: Użycie _config_entry -->
         hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         buses = list(hub._buses_cfg.keys())
         options = {bus: f"Magistrala {bus.title()}" for bus in buses}
@@ -324,11 +321,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a channel configuration."""
-        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
             return self.async_abort(reason="integration_not_setup")
 
-        # <-- FIX 2: Użycie _config_entry -->
         hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self._config_entry.entry_id}_storage"
@@ -426,11 +421,9 @@ class VelolinkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle editing a device name."""
-        # <-- FIX 3: Dodano sprawdzenie -->
         if DOMAIN not in self.hass.data:
             return self.async_abort(reason="integration_not_setup")
 
-        # <-- FIX 2: Użycie _config_entry -->
         hub: VelolinkHub = self.hass.data[DOMAIN][self._config_entry.entry_id]
         storage: VelolinkStorage = self.hass.data[DOMAIN][
             f"{self._config_entry.entry_id}_storage"
